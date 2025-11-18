@@ -1,7 +1,7 @@
 """
-Database Models for the ETL Process.
+Database Models for the University Course Management System.
 
-This module defines the database models using SQLAlchemy for employees, customers, and products.
+This module defines the database models using SQLAlchemy for students, instructors and #TODO: add later
 
 Modules:
     - sqlalchemy: For ORM and database schema definition.
@@ -18,7 +18,16 @@ Base = declarative_base()
 # Database Models
 class StudentDB(Base):
     """
-   To do later
+    Database model for Student table.
+    
+    Attributes:
+        student_id: Primary key, auto-incrementing integer
+        student_name: Student's name
+        credit: Number of credits the student has
     """
-    pass
+    __tablename__ = "students"
+    
+    student_id = Column(Integer, primary_key=True, index=True)
+    student_name = Column(String, nullable=False)
+    credit = Column(Integer, default=0)
    

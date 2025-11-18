@@ -12,7 +12,7 @@ class Student(BaseModel):
 
 
     class Config:
-        orm_mode = True  # This allows the Pydantic model to work with SQLAlchemy models
+        from_attributes = True  # This allows the Pydantic model to work with SQLAlchemy models (Pydantic v2)
 
 class StudentCreate(BaseModel):
     """

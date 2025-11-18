@@ -2,22 +2,11 @@
 Database Configuration
 """
 
-import sqlalchemy as sql
-import sqlalchemy.ext.declarative as declarative
-import sqlalchemy.orm as orm
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
-
-
-def get_db():
-    """
-    Function to get a database session.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 # Load environment variables from .env file
@@ -26,11 +15,26 @@ load_dotenv(".env")
 # Get the database URL from environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set. Please check your .env file.")
+
 # Create the SQLAlchemy engine
-engine = sql.create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL)
 
 # Base class for declarative models
-Base = declarative.declarative_base()
+Base = declarative_base()
 
 # SessionLocal for database operations
-SessionLocal = orm.sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """
+    Function to get a database session.
+    Yields a database session and ensures it's closed after use.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

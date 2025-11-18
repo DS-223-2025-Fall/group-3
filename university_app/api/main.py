@@ -1,12 +1,20 @@
-from Database.models import StudentDB #TODO: add later
-from Database.schema import Student #TODO: add later 
-from Database.database import get_db
+from Database.models import StudentDB, Base #TODO: add later
+from Database.schema import Student, StudentCreate #TODO: add later 
+from Database.database import get_db, engine
 
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, HTTPException
-from typing import Dict
 
 app = FastAPI(title="University Course Management API")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Create database tables on startup.
+    This ensures all tables are created when the application starts.
+    """
+    Base.metadata.create_all(bind=engine)
 
 # STUDENT ENDPOINTS
 
@@ -51,11 +59,7 @@ async def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     db.add(db_student)
     db.commit()
     db.refresh(db_student)
-    return Student (
-        student_id=db_student.student_id,
-        student_name=db_student.student_name,
-        credit=db_student.credit
-    )
+    return db_student
 
 # PUT - Update a student
 
@@ -78,7 +82,7 @@ async def update_student(student_id: int, updated_student: StudentCreate, db: Se
     student = db.query(StudentDB).filter(StudentDB.student_id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    for key, value in updated_student.dict().items():
+    for key, value in updated_student.model_dump().items():
         setattr(student, key, value)
     db.commit()
     db.refresh(student)
