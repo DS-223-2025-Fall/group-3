@@ -1,7 +1,7 @@
 services:
 
   db:
-    container_name: postgresql_db
+    container_name: ${CONTAINER_NAME_DB:-postgresql_db}
     image: postgres:17
     restart: always
     ports:
@@ -19,7 +19,7 @@ services:
       - ./postgres_data:/var/lib/postgresql/data #persisting data 
             
   pgadmin:  
-    container_name: pgadmin
+    container_name: ${CONTAINER_NAME_DB:-pgadmin}
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
@@ -48,6 +48,7 @@ services:
   #     test: "exit 0"
 
   api:
+    container_name: ${CONTAINER_NAME_DB:-university_api}
     build:
       context: ./api
       dockerfile: Dockerfile
@@ -59,7 +60,8 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   # Frontend service - Commented out for now (Frontend developer will add this later)
   # app:
