@@ -35,7 +35,7 @@ class Instructor(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    bio_url = Column(String)  # Matches CSV field name
+    bio_url = Column(String) 
     room_id = Column(Integer, ForeignKey('locations.room_id'))
 
 
@@ -50,8 +50,8 @@ class Program(Base):
     __tablename__ = "programs"
     
     prog_name = Column(String, primary_key=True)
-    deptID = Column(String, ForeignKey('departments.dept_name'))  # Matches CSV field name
-    student_id = Column(Integer, ForeignKey('students.id'))  # Matches CSV field name
+    dept_name = Column(String, ForeignKey('departments.dept_name'))  
+    student_id = Column(Integer, ForeignKey('students.id'))  
 
 
 class Course(Base):
@@ -106,7 +106,7 @@ class Takes(Base):
 class Works(Base):
     __tablename__ = "works"
     
-    instructorid = Column(Integer, ForeignKey('instructors.id'), primary_key=True)  # Matches CSV field name (lowercase)
+    instructorid = Column(Integer, ForeignKey('instructors.id'), primary_key=True) 
     dept_name = Column(String, ForeignKey('departments.dept_name'), primary_key=True)
 
 
@@ -114,7 +114,7 @@ class HasCourse(Base):
     __tablename__ = "hascourse"
     
     prog_name = Column(String, ForeignKey('programs.prog_name'), primary_key=True)
-    courseid = Column(Integer, ForeignKey('courses.id'), primary_key=True)  # Matches CSV field name (lowercase)
+    courseid = Column(Integer, ForeignKey('courses.id'), primary_key=True)  
 
 
 # Function to create all tables (useful for ETL testing)

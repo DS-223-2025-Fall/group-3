@@ -32,6 +32,14 @@ class StudentDB(Base):
     credit = Column(Integer, default=0)
 
 
+# Section model (minimal for TakesDB foreign key)
+class SectionDB(Base):
+    """Minimal Section model for foreign key reference."""
+    __tablename__ = "sections"
+    
+    id = Column(Integer, primary_key=True)
+
+
 class TakesDB(Base):
     """
     Database model for Takes table (student enrollments).
@@ -44,8 +52,7 @@ class TakesDB(Base):
     """
     __tablename__ = "takes"
     
-    student_id = Column(Integer, ForeignKey('students.id'), primary_key=True)
+    student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)
     section_id = Column(Integer, ForeignKey('sections.id'), primary_key=True)
     status = Column(String(20))  # e.g., 'enrolled', 'completed', 'dropped'
     grade = Column(String(5), nullable=True)  # e.g., 'A', 'B+', 'F', 'P', 'NP'
-   

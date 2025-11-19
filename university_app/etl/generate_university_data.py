@@ -19,7 +19,7 @@ from Database.university_data_generator import generate_university_dataset
 NUM_STUDENTS = 10
 NUM_LOCATIONS = 50
 NUM_SECTIONS_PER_COURSE = 1
-CURRENT_YEAR = 2024
+CURRENT_YEAR = 2025
 
 def main():
     logger.info("Starting university data generation...")
@@ -85,6 +85,14 @@ def main():
         print(f"Name: {sample_course['name']}")
         print(f"Credits: {sample_course['credits']}")
         print(f"Cluster Number: {sample_course['cluster_number']}")
+    
+    if len(dataset['instructor']) > 0:
+        print("\n--- Sample Instructor ---")
+        sample_instructor = dataset['instructor'][0]
+        print(f"ID: {sample_instructor['id']}")
+        print(f"Name: {sample_instructor['name']}")
+        print(f"Bio URL: {sample_instructor['bio_url']}")
+        print(f"Room ID: {sample_instructor['room_id']}")
     
     if len(dataset['section']) > 0:
         print("\n--- Sample Section ---")
