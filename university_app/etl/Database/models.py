@@ -1,69 +1,123 @@
-from loguru import logger
+"""
+Database Models for University ETL.
 
+These models define the complete database schema for the university system.
+The ETL process can use these models to:
+1. Create database tables
+2. Load CSV data into the database
+3. Validate data structure
 
-from sqlalchemy import create_engine,Column,Integer,String,Float, DATE, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+Note: The data generator creates dictionaries that are saved to CSV files,
+but these models allow the ETL developer to test database loading independently.
+"""
+
+from sqlalchemy import Column, Integer, String, ForeignKey
 from Database.database import Base, engine
 
-# Base= declarative_base()
 
-class Employee(Base):
-    __tablename__ = "employees"
-
-    employee_id = Column(Integer, primary_key=True, autoincrement=True)
-    first_name = Column(String)
-    last_name = Column(String)
-    email = Column(String)
-    salary = Column(Float)
-
-class Customer(Base):
-    __tablename__ = "customers"
-
-    customer_id = Column(Integer, primary_key=True)
-    customer_name = Column(String)
-    address = Column(String)
-    city = Column(String)
-    zip_code = Column(String)
+class Student(Base):
+    __tablename__ = "students"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    credit = Column(Integer)
 
 
-class Product(Base):
-    __tablename__ = "products"
+class Location(Base):
+    __tablename__ = "locations"
+    
+    room_id = Column(Integer, primary_key=True)
+    building_room_name = Column(String)
 
-    product_id = Column(Integer, primary_key=True)
-    product_name = Column(String)
-    price = Column(Float)
-    description = Column(String)
-    category = Column(String)
 
-# Define the Order table
-class Order(Base):
-    __tablename__ = "orders"
+class Instructor(Base):
+    __tablename__ = "instructors"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    bio_url = Column(String)  # Matches CSV field name
+    room_id = Column(Integer, ForeignKey('locations.room_id'))
 
-    order_id = Column(Integer, primary_key=True)
-    order_date = Column(DateTime)
+
+class Department(Base):
+    __tablename__ = "departments"
+    
+    dept_name = Column(String, primary_key=True)
+    roomID = Column(Integer, ForeignKey('locations.room_id'))
+
+
+class Program(Base):
+    __tablename__ = "programs"
+    
+    prog_name = Column(String, primary_key=True)
+    deptID = Column(String, ForeignKey('departments.dept_name'))  # Matches CSV field name
+    student_id = Column(Integer, ForeignKey('students.id'))  # Matches CSV field name
+
+
+class Course(Base):
+    __tablename__ = "courses"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    credits = Column(Integer)
+    cluster_number = Column(String, nullable=True)  # Comma-separated string for multiple clusters (e.g., "1,2,3,4,6")
+
+
+class TimeSlot(Base):
+    __tablename__ = "time_slots"
+    
+    time_slot_id = Column(Integer, primary_key=True)
+    day_of_week = Column(String)
+    start_time = Column(String)
+    end_time = Column(String)
+
+
+class Section(Base):
+    __tablename__ = "sections"
+    
+    id = Column(Integer, primary_key=True)
+    capacity = Column(Integer)
+    roomID = Column(Integer, ForeignKey('locations.room_id'))
+    duration = Column(String)
     year = Column(Integer)
-    quarter = Column(Integer)
-    month = Column(String)
-
-# Define the Sales table
-class Sale(Base):
-    __tablename__ = "sales"
-
-    transaction_id = Column(Integer, primary_key=True)
-    order_id = Column(Integer, ForeignKey('orders.order_id'))
-    product_id = Column(Integer, ForeignKey('products.product_id'))
-    customer_id = Column(Integer, ForeignKey('customers.customer_id'))
-    employee_id = Column(Integer, ForeignKey('employees.employee_id'))
-    total_sales = Column(Float)
-    quantity = Column(Integer)
-    discount = Column(Float)
-
-    order = relationship("Order")
-    product = relationship("Product")
-    customer = relationship("Customer")
-    employee = relationship("Employee")
+    time_slot_id = Column(Integer, ForeignKey('time_slots.time_slot_id'))
+    course_id = Column(Integer, ForeignKey('courses.id'))
+    instructor_id = Column(Integer, ForeignKey('instructors.id'))
+    syllabus_url = Column(String)
 
 
-Base.metadata.create_all(engine)
+# Junction Tables
+class Prerequisites(Base):
+    __tablename__ = "prerequisites"
+    
+    course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
+    prerequisite_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
+
+
+class Takes(Base):
+    __tablename__ = "takes"
+    
+    student_id = Column(Integer, ForeignKey('students.id'), primary_key=True)
+    section_id = Column(Integer, ForeignKey('sections.id'), primary_key=True)
+    status = Column(String(20))  # e.g., 'enrolled', 'completed', 'dropped'
+    grade = Column(String(5), nullable=True)  # e.g., 'A', 'B+', 'F', 'P', 'NP'
+
+
+class Works(Base):
+    __tablename__ = "works"
+    
+    instructorid = Column(Integer, ForeignKey('instructors.id'), primary_key=True)  # Matches CSV field name (lowercase)
+    dept_name = Column(String, ForeignKey('departments.dept_name'), primary_key=True)
+
+
+class HasCourse(Base):
+    __tablename__ = "hascourse"
+    
+    prog_name = Column(String, ForeignKey('programs.prog_name'), primary_key=True)
+    courseid = Column(Integer, ForeignKey('courses.id'), primary_key=True)  # Matches CSV field name (lowercase)
+
+
+# Function to create all tables (useful for ETL testing)
+def create_tables():
+    """Create all database tables. Useful for ETL developer to test database loading."""
+    Base.metadata.create_all(bind=engine)

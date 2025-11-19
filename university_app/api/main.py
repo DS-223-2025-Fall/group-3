@@ -4,8 +4,16 @@ from Database.database import get_db, engine
 
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI(title="University Course Management API")
+
+# Mount static files for syllabi
+# Syllabi are stored in /api/syllabi/ in the container (mounted from ./syllabi on host)
+SYLLABI_DIR = "/api/syllabi"
+if os.path.exists(SYLLABI_DIR):
+    app.mount("/syllabi", StaticFiles(directory=SYLLABI_DIR), name="syllabi")
 
 
 @app.on_event("startup")

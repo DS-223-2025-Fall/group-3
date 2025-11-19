@@ -11,7 +11,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]  # Healthcheck for PostgreSQL
+        test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]  # Healthcheck for PostgreSQL
         interval: 60s
         timeout: 10s
         retries: 5
@@ -19,7 +19,7 @@ services:
       - ./postgres_data:/var/lib/postgresql/data #persisting data 
             
   pgadmin:  
-    container_name: ${CONTAINER_NAME_DB:-pgadmin}
+    container_name: ${CONTAINER_NAME_PGADMIN:-pgadmin}
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
@@ -50,13 +50,14 @@ services:
       test: "exit 0"
 
   api:
-    container_name: ${CONTAINER_NAME_DB:-university_api}
+    container_name: ${CONTAINER_NAME_API:-university_api}
     build:
       context: ./api
       dockerfile: Dockerfile
     # command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn main:app --host 0.0.0.0'
     volumes:
       - ./api:/api
+      - ./syllabi:/api/syllabi  # Mount syllabi directory
     ports:
       - 8008:8000
     environment:
@@ -79,4 +80,3 @@ services:
   #     - API_URL=http://api:8000
   #   depends_on:
   #     - api
-
