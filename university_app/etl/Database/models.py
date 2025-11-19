@@ -18,8 +18,8 @@ from Database.database import Base, engine
 class Student(Base):
     __tablename__ = "students"
     
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
+    student_id = Column(Integer, primary_key=True)  # Matches API schema
+    student_name = Column(String)  # Matches API schema
     credit = Column(Integer)
 
 
@@ -50,8 +50,8 @@ class Program(Base):
     __tablename__ = "programs"
     
     prog_name = Column(String, primary_key=True)
-    dept_name = Column(String, ForeignKey('departments.dept_name'))  
-    student_id = Column(Integer, ForeignKey('students.id'))  
+    deptID = Column(String, ForeignKey('departments.dept_name'))  # Matches CSV field name
+    student_id = Column(Integer, ForeignKey('students.student_id'))  # Fixed to match actual schema  
 
 
 class Course(Base):
@@ -97,7 +97,7 @@ class Prerequisites(Base):
 class Takes(Base):
     __tablename__ = "takes"
     
-    student_id = Column(Integer, ForeignKey('students.id'), primary_key=True)
+    student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)  # Fixed to match actual schema
     section_id = Column(Integer, ForeignKey('sections.id'), primary_key=True)
     status = Column(String(20))  # e.g., 'enrolled', 'completed', 'dropped'
     grade = Column(String(5), nullable=True)  # e.g., 'A', 'B+', 'F', 'P', 'NP'

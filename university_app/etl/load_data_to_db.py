@@ -74,6 +74,28 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
         logger.warning(f"CSV file is empty: {csv_path}, skipping...")
         return 0
     
+    # Column name mapping: CSV file name -> CSV column -> Model field
+    # Handle cases where CSV uses different names than models
+    # Get the CSV file name (without .csv extension) to determine mapping
+    csv_filename = os.path.basename(csv_path).replace('.csv', '')
+    
+    column_mapping = {
+        'student': {'id': 'student_id', 'name': 'student_name'},  # CSV: id,name -> Model: student_id,student_name
+        'program': {'dept_name': 'deptID'},  # CSV: dept_name -> Model: deptID
+        # Add other mappings as needed
+    }
+    
+    mapping = column_mapping.get(csv_filename, {})
+    
+    # Rename columns if mapping exists
+    if mapping:
+        df = df.rename(columns=mapping)
+    
+    # Special handling for programs - deduplicate by prog_name (primary key)
+    if csv_filename == 'program':
+        df = df.drop_duplicates(subset=['prog_name'], keep='first')
+        logger.info(f"Deduplicated programs: {len(df)} unique programs")
+    
     # Convert DataFrame rows to model instances
     records = []
     for _, row in df.iterrows():
@@ -90,14 +112,24 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
             logger.error(f"Error: {e}")
             raise
     
-    # Bulk insert
+    # Bulk insert with conflict handling
     try:
+        # Check if table already has data - if so, skip duplicates
+        existing_count = db_session.query(model_class).count()
+        if existing_count > 0:
+            logger.warning(f"Table {model_class.__tablename__} already has {existing_count} records. Skipping to avoid duplicates.")
+            return 0
+        
         db_session.bulk_save_objects(records)
         db_session.commit()
         logger.info(f"Loaded {len(records)} records from {csv_path} into {model_class.__tablename__}")
         return len(records)
     except Exception as e:
         db_session.rollback()
+        # If it's a duplicate key error, table might have partial data - try to continue
+        if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+            logger.warning(f"Duplicate records detected in {model_class.__tablename__}. Table may already have data. Skipping...")
+            return 0
         logger.error(f"Error loading {csv_path} into database: {e}")
         raise
 

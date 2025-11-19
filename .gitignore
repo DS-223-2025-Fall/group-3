@@ -5,3 +5,4 @@ pgadmin_data/
 postgres_data/
 university_app/etl/Database/__pycache__/university_data_generator.cpython-310.pyc
 university_app/etl/Database/__pycache__/__init__.cpython-310.pyc
+university_app/etl/data/
