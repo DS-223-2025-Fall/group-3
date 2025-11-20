@@ -31,23 +31,27 @@ services:
     depends_on: 
       - db
 
-  # ETL service - Commented out for now (Data Scientist will add this later??)
-  etl:
-    container_name: ${CONTAINER_NAME_ETL:-university_etl}
-    build:
-      context: ./etl
-      dockerfile: Dockerfile
-    ports:
-      - 3000:3000
-    volumes:
-      - ./etl:/etl
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-    depends_on: 
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: "exit 0"
+  # ETL service - Commented out after initial data load
+  # Uncomment and run when you need to regenerate or reload data:
+  # docker-compose up etl
+  # Then run: docker-compose exec etl python generate_university_data.py
+  # And: docker-compose exec etl python load_data_to_db.py
+  # etl:
+  #   container_name: ${CONTAINER_NAME_ETL:-university_etl}
+  #   build:
+  #     context: ./etl
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - 3000:3000
+  #   volumes:
+  #     - ./etl:/etl
+  #   environment:
+  #     - DATABASE_URL=${DATABASE_URL}
+  #   depends_on: 
+  #     db:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: "exit 0"
 
   api:
     container_name: ${CONTAINER_NAME_API:-university_api}
@@ -66,17 +70,15 @@ services:
       db:
         condition: service_healthy
 
-  # Frontend service - Commented out for now (Frontend developer will add this later)
-  # app:
-  #   container_name: streamlit_app
-  #   build:
-  #     context: ./app
-  #     dockerfile: Dockerfile
-  #   volumes:
-  #     - ./app:/app
-  #   ports:
-  #     - 8501:8501
-  #   environment:
-  #     - API_URL=http://api:8000
-  #   depends_on:
-  #     - api
+  # Frontend service
+  app:
+    container_name: ${CONTAINER_NAME_APP:-university_app}
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - 5173:80
+    environment:
+      - VITE_API_URL=http://localhost:8008
+    depends_on:
+      - api
