@@ -1,0 +1,51 @@
+site_name: University App Documentation
+
+nav:
+  - Home: index.md
+  - ETL: etl.md
+  - API: api.md
+  - APP: app.md
+  - API models: api_models.md
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+      primary: teal
+      accent: purple
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+      primary: teal
+      accent: lime
+
+plugins:
+  - search
+  - autorefs:
+      link_titles: false
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - university_app
+          setup_commands:
+            - import sys
+            - sys.path.insert(0, "university_app")
+          rendering:
+            show_source: true
+
