@@ -20,6 +20,7 @@ from Database.database import engine, get_db
 from Database.models import (
     Student, Location, Instructor, Department, Program, Course,
     TimeSlot, Section, Prerequisites, Takes, Works, HasCourse,
+    Cluster, CourseCluster, Preferred,
     create_tables
 )
 
@@ -37,6 +38,9 @@ TABLE_MODELS = {
     "takes": Takes,
     "works": Works,
     "hascourse": HasCourse,
+    "cluster": Cluster,
+    "course_cluster": CourseCluster,
+    "preferred": Preferred,
 }
 
 # Order matters for foreign key dependencies
@@ -53,6 +57,9 @@ LOAD_ORDER = [
     "takes",         # Depends on student, section
     "works",         # Depends on instructor, department
     "hascourse",     # Depends on program, course
+    "cluster",       # Depends on program
+    "course_cluster", # Depends on course, cluster
+    "preferred",     # Depends on student, cluster
 ]
 
 
@@ -95,6 +102,13 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
     if csv_filename == 'program':
         df = df.drop_duplicates(subset=['prog_name'], keep='first')
         logger.info(f"Deduplicated programs: {len(df)} unique programs")
+    
+    # Special handling for hascourse - deduplicate by (prog_name, courseid) composite key
+    if csv_filename == 'hascourse':
+        original_count = len(df)
+        df = df.drop_duplicates(subset=['prog_name', 'courseid'], keep='first')
+        if len(df) < original_count:
+            logger.info(f"Deduplicated hascourse: {len(df)} unique records (removed {original_count - len(df)} duplicates)")
     
     # Convert DataFrame rows to model instances
     records = []
