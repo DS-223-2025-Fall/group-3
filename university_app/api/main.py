@@ -1,5 +1,27 @@
-from Database.models import StudentDB, Base #TODO: add later
-from Database.schema import Student, StudentCreate #TODO: add later 
+# Import all models so they are registered with SQLAlchemy Base metadata
+# This ensures all tables are created when Base.metadata.create_all() is called
+from Database.models import (
+    StudentDB, SectionDB, TakesDB, LocationDB, InstructorDB, 
+    DepartmentDB, ProgramDB, CourseDB, TimeSlotDB, PrerequisitesDB, 
+    WorksDB, HasCourseDB, ClusterDB, CourseClusterDB, PreferredDB, Base
+)
+from Database.schema import (
+    Student, StudentCreate,
+    Location, LocationCreate,
+    Instructor, InstructorCreate,
+    Department, DepartmentCreate,
+    Program, ProgramCreate,
+    Course, CourseCreate,
+    TimeSlot, TimeSlotCreate,
+    Section, SectionCreate,
+    Prerequisites, PrerequisitesCreate,
+    Takes, TakesCreate,
+    Works, WorksCreate,
+    HasCourse, HasCourseCreate,
+    Cluster, ClusterCreate,
+    CourseCluster, CourseClusterCreate,
+    Preferred, PreferredCreate
+)
 from Database.database import get_db, engine
 
 from sqlalchemy.orm import Session

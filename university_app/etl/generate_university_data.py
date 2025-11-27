@@ -40,7 +40,8 @@ def main():
     tables = [
         "student", "location", "instructor", "department", "program",
         "course", "time_slot", "section", "prerequisites",
-        "takes", "works", "hascourse"
+        "takes", "works", "hascourse",
+        "cluster", "course_cluster", "preferred"
     ]
     
     for table_name in tables:
@@ -65,6 +66,9 @@ def main():
     print(f"Enrollments (takes): {len(dataset['takes'])}")
     print(f"Instructor-Department (works): {len(dataset['works'])}")
     print(f"Program-Course (hascourse): {len(dataset['hascourse'])}")
+    print(f"Clusters: {len(dataset['cluster'])}")
+    print(f"Course-Cluster: {len(dataset['course_cluster'])}")
+    print(f"Preferred (student preferences): {len(dataset['preferred'])}")
     
     # Show sample data
     print("\n" + "="*60)

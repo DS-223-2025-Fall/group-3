@@ -443,6 +443,33 @@ def generate_hascourse(prog_name, course_id):
     }
 
 
+def generate_cluster(cluster_id, cluster_number, prog_name, description=None):
+    """Generate a cluster record."""
+    return {
+        "cluster_id": cluster_id,
+        "cluster_number": cluster_number,
+        "prog_name": prog_name,
+        "description": description
+    }
+
+
+def generate_course_cluster(course_id, cluster_id):
+    """Generate a course_cluster record (course-cluster relationship)."""
+    return {
+        "course_id": course_id,
+        "cluster_id": cluster_id
+    }
+
+
+def generate_preferred(student_id, cluster_id, preference_order=None):
+    """Generate a preferred record (student-cluster preference)."""
+    return {
+        "student_id": student_id,
+        "cluster_id": cluster_id,
+        "preference_order": preference_order
+    }
+
+
 def generate_time_slots():
     """
     Generate time slots for MWF and T/Th schedule patterns.
@@ -827,6 +854,84 @@ def generate_university_dataset(
         for course_id in program_courses:
             hascourse.append(generate_hascourse(prog_name, course_id))
     
+    clusters = []
+    cluster_id = 1
+    cluster_descriptions = {
+        1: "Arts and Humanities",
+        2: "Social Sciences",
+        3: "Philosophy and Ethics",
+        4: "Social Psychology and Behavior",
+        5: "Innovation and Technology",
+        6: "Critical Thinking and Analysis",
+        7: "Computer Science Foundations",
+        8: "Mathematical Sciences",
+        9: "Technology and Society"
+    }
+    
+    for prog_name in ["BAEC", "BAPG"]:
+        for cluster_num in range(1, 7):  
+            clusters.append(generate_cluster(
+                cluster_id,
+                cluster_num,
+                prog_name,
+                cluster_descriptions.get(cluster_num)
+            ))
+            cluster_id += 1
+    
+    for cluster_num in [5, 7, 8, 9]:
+        clusters.append(generate_cluster(
+            cluster_id,
+            cluster_num,
+            "BSCS",
+            cluster_descriptions.get(cluster_num)
+        ))
+        cluster_id += 1
+    
+    cluster_lookup = {}
+    for cluster in clusters:
+        key = (cluster["cluster_number"], cluster["prog_name"])
+        cluster_lookup[key] = cluster["cluster_id"]
+    
+    course_clusters = []
+    course_name_to_id = {course["name"]: course["id"] for course in courses}
+    
+    for course in courses:
+        course_id = course["id"]
+        course_name = course["name"]
+        cluster_number_str = course.get("cluster_number")
+        
+        if cluster_number_str:
+            cluster_numbers = [int(n.strip()) for n in cluster_number_str.split(",")]
+            
+            prog_name = get_program_from_course(course_name)
+            
+            for cluster_num in cluster_numbers:
+                cluster_id_found = None
+                for (cn, pn), cid in cluster_lookup.items():
+                    if cn == cluster_num:
+                        if pn == prog_name:
+                            cluster_id_found = cid
+                            break
+                        elif cluster_id_found is None:
+                            cluster_id_found = cid 
+                
+                if cluster_id_found:
+                    course_clusters.append(generate_course_cluster(course_id, cluster_id_found))
+    
+    preferred = []
+    for student in students:
+        student_id = student["id"]
+        num_preferences = random.randint(1, 3)
+        available_clusters = clusters.copy()
+        random.shuffle(available_clusters)
+        
+        for i, cluster in enumerate(available_clusters[:num_preferences]):
+            preferred.append(generate_preferred(
+                student_id,
+                cluster["cluster_id"],
+                preference_order=i + 1  
+            ))
+    
     return {
         "student": students,
         "location": locations,
@@ -840,11 +945,13 @@ def generate_university_dataset(
         "takes": takes,
         "works": works,
         "hascourse": hascourse,
+        "cluster": clusters,
+        "course_cluster": course_clusters,
+        "preferred": preferred,
     }
 
 
 if __name__ == "__main__":
-    # Example: Generate dataset
     dataset = generate_university_dataset(
         num_students=10,
         num_locations=50,

@@ -117,6 +117,42 @@ class HasCourse(Base):
     courseid = Column(Integer, ForeignKey('courses.id'), primary_key=True)  
 
 
+class Cluster(Base):
+    """
+    Cluster table - weak entity (depends on Program).
+    Represents academic clusters within programs.
+    """
+    __tablename__ = "clusters"
+    
+    cluster_id = Column(Integer, primary_key=True)
+    cluster_number = Column(Integer, nullable=False)  # e.g., 1, 2, 3, 4, 5, 6, 7, 8, 9
+    prog_name = Column(String, ForeignKey('programs.prog_name'), nullable=False)  # Weak entity dependency
+    description = Column(String, nullable=True)  # Optional description of the cluster
+
+
+class CourseCluster(Base):
+    """
+    Course-Cluster junction table (many-to-many relationship).
+    Links courses to clusters.
+    """
+    __tablename__ = "course_cluster"
+    
+    course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
+    cluster_id = Column(Integer, ForeignKey('clusters.cluster_id'), primary_key=True)
+
+
+class Preferred(Base):
+    """
+    Preferred table - weak entity (depends on Student and Cluster).
+    Represents student preferences for clusters.
+    """
+    __tablename__ = "preferred"
+    
+    student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)  # Weak entity dependency
+    cluster_id = Column(Integer, ForeignKey('clusters.cluster_id'), primary_key=True)  # Weak entity dependency
+    preference_order = Column(Integer, nullable=True)  # Optional: order of preference (1 = highest)
+
+
 # Function to create all tables (useful for ETL testing)
 def create_tables():
     """Create all database tables. Useful for ETL developer to test database loading."""

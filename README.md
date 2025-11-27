@@ -32,24 +32,20 @@ If you need to change any values, edit the `.env` file in the `university_app/` 
 
 ### 3. Load Initial Data (First Time Only)
 
-The ETL service is commented out by default to save resources. You need to load data on first setup:
+The ETL service doesn't run automatically. You need to load data on first setup:
 
-**Option A: One-time ETL run (Recommended)**
+**Run the ETL script (Recommended)**
 ```bash
-# This runs ETL without modifying docker-compose.yaml
-docker-compose run --rm etl python generate_university_data.py
-docker-compose run --rm etl python load_data_to_db.py
+# This runs the complete ETL process: generates data, creates tables, and loads data
+docker-compose run --rm etl bash run_etl.sh
 ```
 
-**Option B: Uncomment ETL service**
-1. Edit `docker-compose.yaml` and uncomment the `etl:` service section (lines 39-54)
-2. Run:
-   ```bash
-   docker-compose up -d etl
-   docker-compose exec etl python generate_university_data.py
-   docker-compose exec etl python load_data_to_db.py
-   ```
-3. Comment it out again to save resources
+This will:
+- Generate CSV data files
+- Create database tables (if they don't exist)
+- Load all data into the database
+
+**Note:** The ETL service has `restart: "no"` to save resources. Run it manually whenever you need to regenerate or reload data.
 
 ### 4. Start All Services
 

@@ -16,8 +16,11 @@ RUN pip3 install -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
+# Make the ETL runner script executable
+RUN chmod +x run_etl.sh
+
 # Expose port 3000
 EXPOSE 3000
 
-# Command to run the python file
-CMD ["python", "generate_university_data.py"]
+# Command to run the complete ETL process (generate data + create tables + load data)
+CMD ["./run_etl.sh"]
