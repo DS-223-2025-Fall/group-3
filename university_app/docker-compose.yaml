@@ -31,8 +31,6 @@ services:
     depends_on: 
       - db
 
-  # ETL service - For manual data generation and loading
-  # Run manually when needed: docker-compose run --rm etl bash run_etl.sh
   etl:
     container_name: ${CONTAINER_NAME_ETL:-university_etl}
     build:
