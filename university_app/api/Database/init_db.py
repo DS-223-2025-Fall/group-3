@@ -56,7 +56,7 @@ def is_database_initialized():
 def initialize_database():
     """
     Initialize the database by running the ETL process.
-    This should only be called if the database is empty.
+    Always runs ETL to ensure database has fresh data.
     """
     try:
         # Find the ETL directory (mounted at /etl)
@@ -66,29 +66,62 @@ def initialize_database():
             logger.error("ETL directory not found at /etl. Cannot initialize database.")
             return False
         
-        # Add ETL directory to Python path
-        sys.path.insert(0, str(etl_dir))
-        sys.path.insert(0, str(etl_dir / "Database"))
+        # Add ETL directory to Python path (must be before any imports)
+        etl_path = str(etl_dir)
+        etl_db_path = str(etl_dir / "Database")
+        
+        # Remove if already in path to avoid duplicates
+        if etl_path in sys.path:
+            sys.path.remove(etl_path)
+        if etl_db_path in sys.path:
+            sys.path.remove(etl_db_path)
+            
+        # Insert at the beginning so they're checked first
+        sys.path.insert(0, etl_db_path)  # Database directory first (for imports)
+        sys.path.insert(0, etl_path)      # ETL root second
         
         logger.info("Running ETL process to initialize database...")
         
-        # Import and run ETL functions directly
+        # Run ETL process using subprocess to avoid import path issues
         try:
+            import subprocess
+            
             # Step 1: Generate data
             logger.info("Step 1: Generating university data...")
-            from generate_university_data import main as generate_main
-            generate_main()
+            result1 = subprocess.run(
+                ["python", "generate_university_data.py"],
+                cwd=etl_path,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            if result1.returncode != 0:
+                logger.error(f"Data generation failed: {result1.stderr}")
+                return False
+            logger.info("Data generation completed successfully")
             
             # Step 2: Load data
             logger.info("Step 2: Loading data into database...")
-            from load_data_to_db import main as load_main
-            load_main()
+            result2 = subprocess.run(
+                ["python", "load_data_to_db.py"],
+                cwd=etl_path,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                env={**os.environ, "PYTHONPATH": f"{etl_path}:{etl_path}/Database"}
+            )
+            if result2.returncode != 0:
+                logger.error(f"Data loading failed: {result2.stderr}")
+                logger.error(f"Output: {result2.stdout}")
+                return False
+            logger.info("Data loading completed successfully")
             
             logger.info("Database initialization completed successfully!")
             return True
             
-        except ImportError as e:
-            logger.error(f"Could not import ETL modules: {e}")
+        except Exception as e:
+            logger.error(f"ETL process failed: {e}")
+            logger.error(f"ETL path: {etl_path}")
             logger.error("Make sure ETL directory is mounted and dependencies are installed.")
             return False
             
@@ -102,9 +135,9 @@ def initialize_database():
 def ensure_database_initialized():
     """
     Main function to ensure database is initialized.
-    Checks if database is empty and runs ETL if needed.
+    Always runs ETL to ensure database has data (will handle existing data gracefully).
     """
-    logger.info("Checking if database needs initialization...")
+    logger.info("Ensuring database is initialized...")
     
     # First, ensure tables exist
     try:
@@ -114,12 +147,13 @@ def ensure_database_initialized():
         logger.error(f"Error creating tables: {e}")
         return False
     
-    # Check if database is initialized
-    if is_database_initialized():
-        logger.info("Database is already initialized. Skipping ETL.")
+    # Always run ETL - it will handle existing data gracefully
+    logger.info("Running ETL to initialize/refresh database...")
+    if initialize_database():
+        logger.info("Database initialization completed successfully via ETL.")
         return True
-    
-    # Database is empty, run initialization
-    logger.info("Database is empty. Running initialization...")
-    return initialize_database()
+    else:
+        logger.error("ETL initialization failed. Database may be incomplete.")
+        logger.warning("To manually initialize database, run: docker compose run --rm etl bash run_etl.sh")
+        return False
 

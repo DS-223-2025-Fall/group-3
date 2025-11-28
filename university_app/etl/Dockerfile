@@ -24,4 +24,9 @@ EXPOSE 3000
 
 # Command to run the complete ETL process (generate data + create tables + load data)
 # Use bash explicitly to avoid permission issues with volume mounts
-CMD ["bash", "run_etl.sh"]
+# COMMENTED OUT: ETL no longer runs automatically to prevent data regeneration
+# To run ETL manually: docker compose run --rm etl bash run_etl.sh
+# CMD ["bash", "run_etl.sh"]
+
+# Keep container running but don't execute ETL automatically
+CMD ["tail", "-f", "/dev/null"]

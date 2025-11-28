@@ -60,24 +60,25 @@ class Course(Base):
 
 
 class TimeSlot(Base):
-    """Description: Represents a weekly time slot with day and start/end times."""
+    """Description: Represents a time slot with day, start/end times, year, and semester."""
     __tablename__ = "time_slots"
 
     time_slot_id = Column(Integer, primary_key=True)
     day_of_week = Column(String)
     start_time = Column(String)
     end_time = Column(String)
+    year = Column(Integer)
+    semester = Column(String)  # e.g., 'Fall', 'Spring', 'Summer'
 
 
 class Section(Base):
-    """Description: Represents a specific course section in a given year and time slot."""
+    """Description: Represents a specific course section in a time slot (which includes year and semester)."""
     __tablename__ = "sections"
 
     id = Column(Integer, primary_key=True)
     capacity = Column(Integer)
     roomID = Column(Integer, ForeignKey("locations.room_id"))
     duration = Column(String)
-    year = Column(Integer)
     time_slot_id = Column(Integer, ForeignKey("time_slots.time_slot_id"))
     course_id = Column(Integer, ForeignKey("courses.id"))
     instructor_id = Column(Integer, ForeignKey("instructors.id"))

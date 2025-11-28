@@ -9,7 +9,8 @@ Modules:
     - sqlalchemy: For ORM and database schema definition.
 """
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy.sql import func
 from Database.database import Base
 
 # Database Models
@@ -83,6 +84,8 @@ class TimeSlotDB(Base):
     day_of_week = Column(String)
     start_time = Column(String)
     end_time = Column(String)
+    year = Column(Integer)
+    semester = Column(String)  # e.g., 'Fall', 'Spring', 'Summer'
 
 
 class SectionDB(Base):
@@ -93,7 +96,6 @@ class SectionDB(Base):
     capacity = Column(Integer)
     roomID = Column(Integer, ForeignKey('locations.room_id'))
     duration = Column(String)
-    year = Column(Integer)
     time_slot_id = Column(Integer, ForeignKey('time_slots.time_slot_id'))
     course_id = Column(Integer, ForeignKey('courses.id'))
     instructor_id = Column(Integer, ForeignKey('instructors.id'))
@@ -175,3 +177,108 @@ class PreferredDB(Base):
     
     student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)
     course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)
+
+
+class RecommendationResultDB(Base):
+    """
+    Database model for storing semester recommendation results.
+    
+    This table stores the output of the semester recommendation system,
+    including full semester schedules recommended for students.
+    
+    Relationships:
+    - Links to students (who the recommendation is for)
+    - Links to courses (what course was recommended)
+    - Links to sections (specific section recommended)
+    - Links to time_slots (when the section is offered)
+    """
+    __tablename__ = "recommendation_results"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    
+    # Foreign keys
+    student_id = Column(Integer, ForeignKey('students.student_id'), nullable=False, index=True)
+    course_id = Column(Integer, ForeignKey('courses.id'), nullable=False)
+    recommended_section_id = Column(Integer, ForeignKey('sections.id'), nullable=False)
+    
+    # Recommendation metadata
+    course_name = Column(String(200), nullable=False)  # Store course name for quick access
+    cluster = Column(String(200))  # Cluster(s) this course belongs to
+    credits = Column(Integer)  # Number of credits for this course
+    time_slot = Column(String(100))  # Human-readable time slot (e.g., "Mon 08:30-09:20")
+    
+    # Recommendation logic
+    recommendation_score = Column(String(50))  # Score/ranking (can be string for flexibility)
+    why_recommended = Column(Text)  # JSON string or text explaining why this was recommended
+    slot_number = Column(Integer)  # Position in semester schedule (1-5)
+    
+    # Model and context
+    model_version = Column(String(50))  # e.g., 'semester_scheduler_v1', 'baseline_v1'
+    time_preference = Column(String(20))  # 'morning', 'afternoon', 'evening'
+    semester = Column(String(20))  # 'Fall', 'Spring', 'Summer'
+    year = Column(Integer)  # Academic year
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ABTestAssignmentDB(Base):
+    """
+    Database model for A/B testing assignments.
+    
+    Tracks which students are assigned to which test groups
+    for comparing different UI element positions and configurations.
+    """
+    __tablename__ = "ab_test_assignments"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    student_id = Column(Integer, ForeignKey('students.student_id'), unique=True, nullable=False, index=True)
+    
+    # Test group assignment
+    test_group = Column(String(1), nullable=False)  # 'A' or 'B'
+    
+    # UI Element Positions (stored as JSON string)
+    # Format: {"search_bar": "top", "dropdowns": "left", "buttons": "right", "header_color": "blue"}
+    ui_config = Column(Text)  # JSON string with UI element positions
+    
+    # Timestamp
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class UIElementClickDB(Base):
+    """
+    Database model for tracking clicks on UI elements.
+    
+    Tracks which UI elements users click on and their positions
+    to determine optimal UI layouts.
+    
+    Connected to ab_test_assignments because:
+    - The element_position is determined by the test assignment's ui_config
+    - We need to analyze clicks by test group (A or B)
+    - Clicks are a direct result of the A/B test assignment
+    """
+    __tablename__ = "ui_element_clicks"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    
+    # Foreign key to ab_test_assignments (primary relationship)
+    # This connects clicks to the test assignment, which determines the UI positions
+    assignment_id = Column(Integer, ForeignKey('ab_test_assignments.id'), nullable=False, index=True)
+    
+    # Keep student_id for convenience/performance (denormalized)
+    # Can also get via assignment.student_id, but this avoids joins for student queries
+    # NOTE: This should always match assignment.student_id (derived automatically in API)
+    student_id = Column(Integer, ForeignKey('students.student_id'), nullable=False, index=True)
+    
+    # UI element information
+    element_type = Column(String(50), nullable=False)  # 'search_bar', 'dropdown', 'button', 'slider', etc.
+    element_id = Column(String(100))  # Specific element identifier (e.g., 'search_button', 'year_dropdown')
+    element_position = Column(String(50))  # Position variant (e.g., 'top', 'left', 'right', 'bottom')
+    
+    # Click metadata
+    click_count = Column(Integer, default=1)  # Number of clicks (can aggregate)
+    page_url = Column(String(500))  # URL where click occurred
+    
+    # Timestamp
+    clicked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
