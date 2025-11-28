@@ -3,8 +3,13 @@ from pydantic import BaseModel
 # Pydantic models for request and response validation
 class Student(BaseModel):
     """
-    Response schemas for student
-    """ 
+    Description:
+        Response schema representing a student returned from the database.
+    Inputs:
+        Automatically populated from SQLAlchemy model attributes.
+    Return:
+        A validated student object containing ID, name, and credit information.
+    """
 
     student_id: int
     student_name: str
@@ -16,8 +21,13 @@ class Student(BaseModel):
 
 class StudentCreate(BaseModel):
     """
-    Request schema for creating a student
-    """    
+    Description:
+        Request schema for creating a new student record.
+    Inputs:
+        Student name and optionally initial credit value.
+    Return:
+        A validated object used to insert a new student into the database.
+    """   
 
     student_name: str
     credit: int = 0 # Default credit value

@@ -18,13 +18,14 @@ Base = declarative_base()
 # Database Models
 class StudentDB(Base):
     """
-    Database model for Student table.
-    
-    Attributes:
-        student_id: Primary key, auto-incrementing integer
-        student_name: Student's name
-        credit: Number of credits the student has
+    Description:
+        Represents a student record in the database.
+    Inputs:
+        No direct inputs; SQLAlchemy handles the attributes.
+    Return:
+        Creates a database table storing student IDs, names, and credits.
     """
+
     __tablename__ = "students"
     
     student_id = Column(Integer, primary_key=True, index=True)
@@ -34,7 +35,15 @@ class StudentDB(Base):
 
 # Section model (minimal for TakesDB foreign key)
 class SectionDB(Base):
-    """Minimal Section model for foreign key reference."""
+    """
+    Description:
+        Represents a course section in the system.
+    Inputs:
+        Managed automatically by SQLAlchemy; only stores the section ID.
+    Return:
+        Creates a minimal sections table for foreign key relationships.
+    """
+
     __tablename__ = "sections"
     
     id = Column(Integer, primary_key=True)
@@ -42,14 +51,14 @@ class SectionDB(Base):
 
 class TakesDB(Base):
     """
-    Database model for Takes table (student enrollments).
-    
-    Attributes:
-        student_id: Foreign key to students table (part of primary key)
-        section_id: Foreign key to sections table (part of primary key)
-        status: Enrollment status (e.g., 'enrolled', 'completed', 'dropped')
-        grade: Grade received (e.g., 'A', 'B+', 'F', 'P', 'NP') or None
+    Description:
+        Stores the relationship between students and sections they take.
+    Inputs:
+        Student ID, section ID, enrollment status, and optional grade.
+    Return:
+        Creates a table tracking enrollments and grades for each student-section pair.
     """
+    
     __tablename__ = "takes"
     
     student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)

@@ -19,8 +19,12 @@ if os.path.exists(SYLLABI_DIR):
 @app.on_event("startup")
 async def startup_event():
     """
-    Create database tables on startup.
-    This ensures all tables are created when the application starts.
+    Description:
+        Initializes the database on application startup.
+    Inputs:
+        None.
+    Return:
+        Creates all database tables before the API begins serving requests.
     """
     Base.metadata.create_all(bind=engine)
 
@@ -30,17 +34,13 @@ async def startup_event():
 @app.get("/students/{student_id}", response_model=Student)
 async def get_student(student_id: int, db: Session = Depends(get_db)):
     """
-    Retrieve a student by their unique ID.
-
-    Args:
-        student_id (int): The unique identifier of the student.
-        db (Session, optional): Database session provided by dependency injection.
-
-    Returns:
-        Student: The student's details.
-
-    Raises:
-        HTTPException: If the student is not found, raises a 404 error.
+    Description:
+        Retrieves a student's information using their ID.
+    Inputs:
+        student_id (int): Unique ID of the student.
+        db (Session): Active database session.
+    Return:
+        Student object if found; otherwise raises a 404 error.
     """
     student = db.query(StudentDB).filter(StudentDB.student_id == student_id).first()
     if student is None:
@@ -51,14 +51,13 @@ async def get_student(student_id: int, db: Session = Depends(get_db)):
 @app.post("/students/", response_model=Student)
 async def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     """
-    Create a new student.
-
-    Args:
-        student (StudentCreate): The student data to create.
-        db (Session, optional): Database session provided by dependency injection.
-
-    Returns:
-        Student: The newly created student's details.
+    Description:
+        Creates a new student record in the database.
+    Inputs:
+        student (StudentCreate): Incoming student data.
+        db (Session): Active database session.
+    Return:
+        The newly created student object.
     """
     db_student = StudentDB(
         student_name=student.student_name,
@@ -74,18 +73,14 @@ async def create_student(student: StudentCreate, db: Session = Depends(get_db)):
 @app.put("/students/{student_id}", response_model=Student)
 async def update_student(student_id: int, updated_student: StudentCreate, db: Session = Depends(get_db)):
     """
-    Update an existing student's details.
-
-    Args:
-        student_id (int): The unique identifier of the student to update.
-        updated_student (StudentCreate): The new student data.
-        db (Session, optional): Database session provided by dependency injection.
-
-    Returns:
-        Student: The updated student's details.
-
-    Raises:
-        HTTPException: If the student is not found, raises a 404 error.
+    Description:
+        Updates an existing student's data.
+    Inputs:
+        student_id (int): ID of the student to update.
+        updated_student (StudentCreate): New data for the student.
+        db (Session): Active database session.
+    Return:
+        Updated student object, or 404 if the student does not exist.
     """
     student = db.query(StudentDB).filter(StudentDB.student_id == student_id).first()
     if not student:
@@ -102,17 +97,13 @@ async def update_student(student_id: int, updated_student: StudentCreate, db: Se
 @app.delete("/students/{student_id}")
 async def delete_student(student_id: int, db: Session = Depends(get_db)):
     """
-    Delete a student by their unique ID.
-
-    Args:
-        student_id (int): The unique identifier of the student to delete.
-        db (Session, optional): Database session provided by dependency injection.
-
-    Returns:
-        dict: A message confirming successful deletion.
-
-    Raises:
-        HTTPException: If the student is not found, raises a 404 error.
+    Description:
+        Deletes a student by ID from the database.
+    Inputs:
+        student_id (int): Unique ID of the student to remove.
+        db (Session): Active database session.
+    Return:
+        Confirmation message if deletion is successful.
     """
     student = db.query(StudentDB).filter(StudentDB.student_id == student_id).first()
     if not student:
