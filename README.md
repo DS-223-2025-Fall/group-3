@@ -62,14 +62,12 @@ This will start:
 - pgAdmin (port 5050)
 - FastAPI backend (port 8008)
 - React frontend (port 5173)
-- Documentation (port 8000)
 
 ### 5. Access the Application
 
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8008
 - **API Docs**: http://localhost:8008/docs
-- **Documentation**: http://localhost:8000
 - **pgAdmin**: http://localhost:5050
 
 ## Common Commands
@@ -98,35 +96,24 @@ docker-compose exec db psql -U postgres -d university_db
 
 This project uses [MkDocs](https://www.mkdocs.org/) with the Material theme for documentation.
 
-### Setup Documentation
+### How to use
 
 1. **Install dependencies** (if not already installed):
    ```bash
    pip install -r requirements.txt
    ```
-   Or install MkDocs directly:
-   ```bash
-   pip install mkdocs mkdocs-material "mkdocstrings[python]"
-   ```
 
-2. **Build the documentation**:
-   ```bash
-   mkdocs build
-   ```
-   This generates static HTML files in the `site/` directory.
-
-3. **Serve documentation locally** (for development):
+2. **Serve documentation locally** (for development):
    ```bash
    mkdocs serve
    ```
    The documentation will be available at http://127.0.0.1:8000
 
-4. **Or run via Docker** (recommended for consistency):
+3. **Build the documentation**:
    ```bash
-   cd university_app
-   docker-compose up -d docs
+   mkdocs build
    ```
-   The documentation will be available at http://localhost:8000
+   This generates static HTML files in the `site/` directory.
 
 ### Documentation Structure
 
