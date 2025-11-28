@@ -100,15 +100,15 @@ DEPARTMENTS = [
     "Turpanjian College of Health Sciences",
 ]
 
-# Mapping course prefixes to programs
+# Mapping course prefixes to programs (using actual program names: BSDS, FND, GENED)
 COURSE_PREFIX_TO_PROGRAM = {
-    "CS": "BSCS",
-    "DS": "BSDS",
-    "ENGS": "BSES",
-    "BUS": "BAB",
-    "FND": "BAB",
-    "CHSS": "BAEC",
-    "CSE": "BSCS",
+    "CS": "BSDS",  # CS courses map to BSDS (data science program)
+    "DS": "BSDS",  # DS courses map to BSDS
+    "ENGS": "BSDS",  # Engineering courses map to BSDS
+    "BUS": "GENED",  # Business courses map to GENED
+    "FND": "FND",  # FND courses map to FND
+    "CHSS": "FND",  # CHSS courses map to FND (general education)
+    "CSE": "BSDS",  # CSE courses map to BSDS
 }
 
 # Course groupings for instructor assignment
@@ -947,7 +947,8 @@ def generate_university_dataset(
         9: "Technology and Society",
     }
 
-    for prog_name in ["BAEC", "BAPG"]:
+    # Generate clusters for FND and GENED (general education programs)
+    for prog_name in ["FND", "GENED"]:
         for cluster_num in range(1, 7):
             clusters.append(
                 generate_cluster(
@@ -959,12 +960,13 @@ def generate_university_dataset(
             )
             cluster_id += 1
 
+    # Generate clusters for BSDS (data science program - similar to CS)
     for cluster_num in [5, 7, 8, 9]:
         clusters.append(
             generate_cluster(
                 cluster_id,
                 cluster_num,
-                "BSCS",
+                "BSDS",
                 cluster_descriptions.get(cluster_num),
             )
         )

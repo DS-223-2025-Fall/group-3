@@ -30,28 +30,18 @@ The `.env` file is included in the repository with default configuration. You ca
 
 If you need to change any values, edit the `.env` file in the `university_app/` directory.
 
-### 3. Load Initial Data (First Time Only)
-
-The ETL service doesn't run automatically. You need to load data on first setup:
-
-**Run the ETL script (Recommended)**
-```bash
-# This runs the complete ETL process: generates data, creates tables, and loads data
-docker-compose run --rm etl bash run_etl.sh
-```
-
-This will:
-- Generate CSV data files
-- Create database tables (if they don't exist)
-- Load all data into the database
-
-**Note:** The ETL service has `restart: "no"` to save resources. Run it manually whenever you need to regenerate or reload data.
-
-### 4. Start All Services
+### 3. Start All Services
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
+
+**That's it!** The database will be automatically initialized on first startup:
+- Database tables are created automatically
+- Data is generated and loaded automatically
+- All services will start once initialization is complete
+
+**Note:** The initialization only runs if the database is empty. If you need to regenerate data, see the "Regenerating Data" section below.
 
 This will start:
 - PostgreSQL database (port 5432)
@@ -87,6 +77,20 @@ docker-compose exec db psql -U postgres -d university_db
 - URL: http://localhost:5050
 - Email: admin@admin.com
 - Password: (from .env file)
+
+### Regenerating Data
+
+If you need to regenerate or reload the database data:
+
+```bash
+# Option 1: Clear database and restart (recommended)
+docker-compose down
+rm -rf postgres_data/
+docker-compose up -d --build
+
+# Option 2: Manually run ETL
+docker-compose run --rm etl bash run_etl.sh
+```
 
 ## Documentation
 

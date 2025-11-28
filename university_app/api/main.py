@@ -23,6 +23,7 @@ from Database.schema import (
     Preferred, PreferredCreate
 )
 from Database.database import get_db, engine
+from Database.init_db import ensure_database_initialized
 
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, HTTPException
@@ -41,10 +42,10 @@ if os.path.exists(SYLLABI_DIR):
 @app.on_event("startup")
 async def startup_event():
     """
-    Create database tables on startup.
-    This ensures all tables are created when the application starts.
+    Initialize database on startup.
+    Creates tables and loads data if database is empty.
     """
-    Base.metadata.create_all(bind=engine)
+    ensure_database_initialized()
 
 # STUDENT ENDPOINTS
 

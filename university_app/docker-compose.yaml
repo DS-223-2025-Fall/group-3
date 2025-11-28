@@ -31,11 +31,8 @@ services:
     depends_on: 
       - db
 
-  # ETL service - Commented out after initial data load
-  # Uncomment and run when you need to regenerate or reload data:
-  # docker-compose up etl
-  # Then run: docker-compose exec etl python generate_university_data.py
-  # And: docker-compose exec etl python load_data_to_db.py
+  # ETL service - For manual data generation and loading
+  # Run manually when needed: docker-compose run --rm etl bash run_etl.sh
   etl:
     container_name: ${CONTAINER_NAME_ETL:-university_etl}
     build:
@@ -61,6 +58,7 @@ services:
     # command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn main:app --host 0.0.0.0'
     volumes:
       - ./api:/api
+      - ./etl:/etl  # Mount ETL directory for database initialization
       - ./syllabi/syllabi.zip:/api/syllabi.zip:ro  # Mount syllabi zip file (read-only)
     ports:
       - 8008:8000
