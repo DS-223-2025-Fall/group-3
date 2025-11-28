@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Header'
 import SearchFilters from '@/components/SearchFilters'
 import CourseTable from '@/components/CourseTable'
 import DraftSchedule from '@/components/DraftSchedule'
+import SavedSchedules from '@/components/SavedSchedules'
 import { Course, fetchCourses } from '@/lib/api'
 import { mockCourses } from '@/data/mockCourses'
 
 const Index = () => {
+  const { isAuthenticated } = useAuth()
   const [year, setYear] = useState('2024')
   const [semester, setSemester] = useState('Fall')
   const [courseType, setCourseType] = useState('All')
@@ -15,6 +18,7 @@ const Index = () => {
   const [courses, setCourses] = useState<Course[]>(mockCourses)
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set())
   const [isDraftOpen, setIsDraftOpen] = useState(false)
+  const [isSavedSchedulesOpen, setIsSavedSchedulesOpen] = useState(false)
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
 
   // Load courses on mount and when filters change
@@ -150,7 +154,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6 md:ml-6">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            Courses by Semester
+            {isAuthenticated ? 'Registration for Courses' : 'Courses by Semester'}
           </h1>
           <p className="text-gray-600">
             Browse and select courses for the {semester} {year} semester.
@@ -168,6 +172,8 @@ const Index = () => {
           onSearchTextChange={setSearchText}
           onSearch={handleSearch}
           onDraftSchedule={handleDraftSchedule}
+          onSavedSchedules={() => setIsSavedSchedulesOpen(true)}
+          isAuthenticated={isAuthenticated}
         />
 
         <CourseTable
@@ -183,6 +189,19 @@ const Index = () => {
           onOpenChange={setIsDraftOpen}
           selectedCourses={selectedCoursesList}
           onRemoveCourse={handleRemoveCourse}
+          onScheduleSaved={() => {
+            // Refresh saved schedules if modal is open
+            if (isSavedSchedulesOpen) {
+              // Force re-render by toggling
+              setIsSavedSchedulesOpen(false)
+              setTimeout(() => setIsSavedSchedulesOpen(true), 100)
+            }
+          }}
+        />
+
+        <SavedSchedules
+          open={isSavedSchedulesOpen}
+          onOpenChange={setIsSavedSchedulesOpen}
         />
       </main>
     </div>
