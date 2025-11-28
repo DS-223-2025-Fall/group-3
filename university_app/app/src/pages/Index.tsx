@@ -4,7 +4,7 @@ import Header from '@/components/Header'
 import SearchFilters from '@/components/SearchFilters'
 import CourseTable from '@/components/CourseTable'
 import DraftSchedule from '@/components/DraftSchedule'
-import { Course, fetchCourses } from '@/lib/api'
+import { Course, fetchCourses, getUIPositions, trackUIClick, UIElementPosition } from '@/lib/api'
 import { mockCourses } from '@/data/mockCourses'
 
 const Index = () => {
@@ -16,6 +16,21 @@ const Index = () => {
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set())
   const [isDraftOpen, setIsDraftOpen] = useState(false)
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
+  const [uiConfig, setUiConfig] = useState<UIElementPosition | null>(null)
+  const [studentId] = useState(1) // In production, get from auth context
+
+  // Load UI positions on mount
+  useEffect(() => {
+    const loadUIPositions = async () => {
+      try {
+        const positions = await getUIPositions(studentId)
+        setUiConfig(positions)
+      } catch (error) {
+        console.error('Failed to load UI positions:', error)
+      }
+    }
+    loadUIPositions()
+  }, [studentId])
 
   // Load courses on mount and when filters change
   useEffect(() => {
@@ -128,6 +143,16 @@ const Index = () => {
   }
 
   const handleSearch = () => {
+    // Track search button click
+    if (uiConfig) {
+      trackUIClick({
+        student_id: studentId,
+        element_type: 'button',
+        element_id: 'search_button',
+        element_position: uiConfig.ui_config.buttons,
+        page_url: window.location.href
+      })
+    }
     loadCourses()
   }
 
@@ -146,7 +171,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header uiConfig={uiConfig} />
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
@@ -168,6 +193,8 @@ const Index = () => {
           onSearchTextChange={setSearchText}
           onSearch={handleSearch}
           onDraftSchedule={handleDraftSchedule}
+          uiConfig={uiConfig}
+          studentId={studentId}
         />
 
         <CourseTable

@@ -100,6 +100,8 @@ class TimeSlot(BaseModel):
     day_of_week: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    year: Optional[int] = None
+    semester: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -109,6 +111,8 @@ class TimeSlotCreate(BaseModel):
     day_of_week: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    year: Optional[int] = None
+    semester: Optional[str] = None
 
 # Section Schemas
 class Section(BaseModel):
@@ -117,7 +121,6 @@ class Section(BaseModel):
     capacity: Optional[int] = None
     roomID: Optional[int] = None
     duration: Optional[str] = None
-    year: Optional[int] = None
     time_slot_id: Optional[int] = None
     course_id: Optional[int] = None
     instructor_id: Optional[int] = None
@@ -131,7 +134,6 @@ class SectionCreate(BaseModel):
     capacity: Optional[int] = None
     roomID: Optional[int] = None
     duration: Optional[str] = None
-    year: Optional[int] = None
     time_slot_id: Optional[int] = None
     course_id: Optional[int] = None
     instructor_id: Optional[int] = None
@@ -241,3 +243,37 @@ class PreferredCreate(BaseModel):
     """Request schema for creating a preferred record"""
     student_id: int
     course_id: int
+
+# UI Element AB Testing Schemas
+class UIElementPosition(BaseModel):
+    """Response schema for UI element position assignment"""
+    student_id: int
+    test_group: str
+    ui_config: dict  # JSON object with UI element positions
+    assigned_at: str
+
+    class Config:
+        from_attributes = True
+
+class UIElementClick(BaseModel):
+    """Response schema for UI element click"""
+    id: int
+    assignment_id: int  # Foreign key to ab_test_assignments
+    student_id: int  # Convenience field (can get via assignment)
+    element_type: str
+    element_id: Optional[str] = None
+    element_position: Optional[str] = None
+    click_count: int
+    page_url: Optional[str] = None
+    clicked_at: str
+
+    class Config:
+        from_attributes = True
+
+class UIElementClickCreate(BaseModel):
+    """Request schema for tracking a UI element click"""
+    student_id: int
+    element_type: str  # 'search_bar', 'dropdown', 'button', 'slider', etc.
+    element_id: Optional[str] = None  # Specific element identifier
+    element_position: Optional[str] = None  # Position variant
+    page_url: Optional[str] = None

@@ -121,16 +121,8 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
             logger.error(f"Error: {e}")
             raise
 
-    # Bulk insert with conflict handling
+    # Bulk insert (tables are already cleared in main() before loading)
     try:
-        existing_count = db_session.query(model_class).count()
-        if existing_count > 0:
-            logger.warning(
-                f"Table {model_class.__tablename__} already has {existing_count} records. "
-                f"Skipping to avoid duplicates."
-            )
-            return 0
-
         db_session.bulk_save_objects(records)
         db_session.commit()
         logger.info(
@@ -142,7 +134,7 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
         if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
             logger.warning(
                 f"Duplicate records detected in {model_class.__tablename__}. "
-                f"Table may already have data. Skipping..."
+                f"This may indicate a partial load. Consider clearing the table first."
             )
             return 0
         logger.error(f"Error loading {csv_path} into database: {e}")
@@ -152,6 +144,7 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
 def main():
     """
     Description: Create tables if needed and load all CSVs into the database in dependency order.
+    Clears existing data first to avoid duplicates, then loads fresh data.
     inputs: None; uses global LOAD_ORDER and TABLE_MODELS.
     return: None.
     """
@@ -167,10 +160,22 @@ def main():
     db = next(db_gen)
 
     try:
+        # First, clear all tables in reverse dependency order to avoid foreign key constraints
+        logger.info("Clearing existing data from tables (in reverse dependency order)...")
+        for table_name in reversed(LOAD_ORDER):
+            model_class = TABLE_MODELS[table_name]
+            existing_count = db.query(model_class).count()
+            if existing_count > 0:
+                logger.info(f"Clearing {existing_count} records from {table_name}...")
+                db.query(model_class).delete()
+        
+        db.commit()
+        logger.info("All existing data cleared. Loading fresh data...")
+
+        # Now load tables in dependency order
         data_dir = "data"
         total_records = 0
 
-        # Load tables in dependency order
         for table_name in LOAD_ORDER:
             csv_path = os.path.join(data_dir, f"{table_name}.csv")
             model_class = TABLE_MODELS[table_name]
@@ -185,6 +190,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Error during data loading: {e}")
+        db.rollback()
         raise
     finally:
         db.close()

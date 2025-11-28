@@ -198,6 +198,9 @@ DURATION_OPTIONS = ["6 weeks", "8 weeks", "12 weeks"]
 # Year options for sections
 YEAR_OPTIONS = [2023, 2024, 2025]
 
+# Semester options
+SEMESTER_OPTIONS = ['Fall', 'Spring', 'Summer']
+
 # Courses with cluster numbers - mapping course name to list of possible cluster numbers
 COURSES_WITH_CLUSTERS = {
     "CHSS 170 Religion in America": [1, 2, 3, 4, 6],
@@ -231,19 +234,35 @@ def get_program_from_course(course_name):
     return "BAB"
 
 
-def generate_student(student_id, program_name=None):
+def generate_student(student_id, program_name=None, target_credits=None):
     """
     Description: Generate a student record with a random name, credits, and program name.
     inputs: student_id (int) – sequential student identifier, program_name (str) – program name.
+            target_credits (int) – target credit amount (will be updated after takes are generated).
     return: Dict with keys 'id', 'name', 'credit', and 'program_name'.
     """
     if program_name is None:
         program_name = "BSDS"  # For MVP product, lets assume all students are in BSDS program
+    
+    # If target_credits not specified, assign based on standing distribution
+    if target_credits is None:
+        # Distribute students across standings: 25% each
+        standing_choice = random.choice(["Freshman", "Sophomore", "Junior", "Senior"])
+        if standing_choice == "Freshman":
+            target_credits = 0
+        elif standing_choice == "Sophomore":
+            target_credits = 30
+        elif standing_choice == "Junior":
+            target_credits = 60
+        else:  # Senior
+            target_credits = 90
+    
     return {
         "id": student_id,
         "name": fake.name(),
-        "credit": random.randint(0, 100),
+        "credit": target_credits,  # Will be updated to match actual completed courses
         "program_name": program_name,
+        "_target_credits": target_credits,  # Store target for later use
     }
 
 
@@ -408,25 +427,28 @@ def generate_course(course_id, course_name):
     }
 
 
-def generate_time_slot(time_slot_id, day_of_week, start_time, end_time):
+def generate_time_slot(time_slot_id, day_of_week, start_time, end_time, year, semester):
     """
-    Description: Generate a time_slot record with day and formatted start/end times.
-    inputs: time_slot_id (int), day_of_week (str), start_time (datetime.time), end_time (datetime.time).
-    return: Dict with 'time_slot_id', 'day_of_week', 'start_time', and 'end_time'.
+    Description: Generate a time_slot record with day, formatted start/end times, year, and semester.
+    inputs: time_slot_id (int), day_of_week (str), start_time (datetime.time), end_time (datetime.time), year (int), semester (str).
+    return: Dict with 'time_slot_id', 'day_of_week', 'start_time', 'end_time', 'year', and 'semester'.
     """
     return {
         "time_slot_id": time_slot_id,
         "day_of_week": day_of_week,
         "start_time": start_time.strftime("%H:%M:%S"),
         "end_time": end_time.strftime("%H:%M:%S"),
+        "year": year,
+        "semester": semester,
     }
 
 
-def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id, year):
+def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id):
     """
     Description: Generate a course section record with fixed capacity and a syllabus URL.
-    inputs: section_id, course_id, instructor_id, room_id, time_slot_id (ints), year (int).
+    inputs: section_id, course_id, instructor_id, room_id, time_slot_id (ints).
     return: Dict with section metadata including 'capacity', 'duration', and 'syllabus_url'.
+    Note: year and semester are now stored in the time_slot, not in the section.
     """
     capacity = 30
     duration = random.choice(DURATION_OPTIONS)
@@ -437,7 +459,6 @@ def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id
         "capacity": capacity,
         "roomID": room_id,
         "duration": duration,
-        "year": year,
         "time_slot_id": time_slot_id,
         "course_id": course_id,
         "instructor_id": instructor_id,
@@ -535,9 +556,9 @@ def generate_preferred(student_id, course_id):
 
 def generate_time_slots():
     """
-    Description: Generate all MWF and T/Th time slot records for a weekly schedule.
-    inputs: None; uses fixed patterns for days and time ranges.
-    return: List of time_slot dicts with IDs, days, and start/end times.
+    Description: Generate all MWF and T/Th time slot records for weekly schedules across all years and semesters.
+    inputs: None; uses fixed patterns for days, time ranges, years, and semesters.
+    return: List of time_slot dicts with IDs, days, start/end times, year, and semester.
     """
     time_slots = []
     time_slot_id = 1
@@ -573,13 +594,6 @@ def generate_time_slots():
         (20, 20),
     ]
 
-    for day in mwf_days:
-        for i in range(len(mwf_start_times)):
-            start_time = time(mwf_start_times[i][0], mwf_start_times[i][1])
-            end_time = time(mwf_end_times[i][0], mwf_end_times[i][1])
-            time_slots.append(generate_time_slot(time_slot_id, day, start_time, end_time))
-            time_slot_id += 1
-
     # T/Th schedule (75-minute classes)
     tth_days = ["Tue", "Thu"]
     tth_start_times = [
@@ -603,12 +617,34 @@ def generate_time_slots():
         (20, 45),
     ]
 
+    # Generate time slots for each combination of:
+    # - Weekly pattern (MWF or T/Th with specific times)
+    # - Year (2023, 2024, 2025)
+    # - Semester (Fall, Spring, Summer)
+    
+    # First, collect all weekly patterns
+    weekly_patterns = []
+    
+    # MWF patterns
+    for day in mwf_days:
+        for i in range(len(mwf_start_times)):
+            start_time = time(mwf_start_times[i][0], mwf_start_times[i][1])
+            end_time = time(mwf_end_times[i][0], mwf_end_times[i][1])
+            weekly_patterns.append((day, start_time, end_time))
+    
+    # T/Th patterns
     for day in tth_days:
         for i in range(len(tth_start_times)):
             start_time = time(tth_start_times[i][0], tth_start_times[i][1])
             end_time = time(tth_end_times[i][0], tth_end_times[i][1])
-            time_slots.append(generate_time_slot(time_slot_id, day, start_time, end_time))
-            time_slot_id += 1
+            weekly_patterns.append((day, start_time, end_time))
+    
+    # Generate time slots for each weekly pattern × year × semester combination
+    for day, start_time, end_time in weekly_patterns:
+        for year in YEAR_OPTIONS:
+            for semester in SEMESTER_OPTIONS:
+                time_slots.append(generate_time_slot(time_slot_id, day, start_time, end_time, year, semester))
+                time_slot_id += 1
 
     return time_slots
 
@@ -616,6 +652,7 @@ def generate_time_slots():
 def generate_takes_data(students, sections, courses, prerequisites):
     """
     Description: Generate takes records (enrollments) per student while respecting prerequisites.
+    Ensures students have enough completed courses to match their target credit amount.
     inputs: students, sections, courses, prerequisites (lists of dicts as generated above).
     return: List of takes dicts with status/grade, ensuring prerequisite completion logic.
     """
@@ -632,26 +669,28 @@ def generate_takes_data(students, sections, courses, prerequisites):
 
     # Build section to course mapping
     section_to_course = {section["id"]: section["course_id"] for section in sections}
+    
+    # Build course_id to credits mapping
+    course_to_credits = {course["id"]: course["credits"] for course in courses}
 
     grades = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F", "P", "NP"]
 
     for student in students:
         student_id = student["id"]
         completed_courses = set()
+        target_credits = student.get("_target_credits", 0)  # Get target credits
+        current_credits = 0
 
-        num_enrollments = random.randint(3, 8)
+        # Shuffle sections for random selection
         available_sections = sections.copy()
         random.shuffle(available_sections)
 
-        enrollments_created = 0
-
+        # First pass: Generate completed courses until we reach target credits
         for section in available_sections:
-            if enrollments_created >= num_enrollments:
-                break
-
             section_id = section["id"]
             course_id = section_to_course[section_id]
 
+            # Check prerequisites
             can_enroll = True
             if course_id in prereq_map:
                 required_prereqs = prereq_map[course_id]
@@ -661,26 +700,48 @@ def generate_takes_data(students, sections, courses, prerequisites):
             if not can_enroll:
                 continue
 
-            status_choice = random.choices(
-                ["completed", "enrolled", "dropped"],
-                weights=[40, 50, 10],
-                k=1,
-            )[0]
+            # If we haven't reached target credits, prioritize completed courses
+            if current_credits < target_credits:
+                course_credits = course_to_credits.get(course_id, 0)
+                # Only add if it won't exceed target by too much (allow some flexibility)
+                if current_credits + course_credits <= target_credits + 5:
+                    grade = random.choice(grades)
+                    takes.append(generate_takes(student_id, section_id, "completed", grade))
+                    completed_courses.add(course_id)
+                    current_credits += course_credits
+                    continue
 
-            if status_choice == "completed":
-                grade = random.choice(grades)
-                takes.append(generate_takes(student_id, section_id, "completed", grade))
-                completed_courses.add(course_id)
-                enrollments_created += 1
+        # Second pass: Add some enrolled courses (1-3)
+        num_enrollments = random.randint(1, 3)
+        enrolled_count = 0
+        
+        for section in available_sections:
+            if enrolled_count >= num_enrollments:
+                break
+                
+            section_id = section["id"]
+            course_id = section_to_course[section_id]
 
-            elif status_choice == "enrolled":
-                takes.append(generate_takes(student_id, section_id, "enrolled", None))
-                enrollments_created += 1
+            # Skip if already completed
+            if course_id in completed_courses:
+                continue
 
-            elif status_choice == "dropped":
-                grade_choice = random.choice([None, "F", "NP"])
-                takes.append(generate_takes(student_id, section_id, "dropped", grade_choice))
-                enrollments_created += 1
+            # Check prerequisites
+            can_enroll = True
+            if course_id in prereq_map:
+                required_prereqs = prereq_map[course_id]
+                if not all(prereq_id in completed_courses for prereq_id in required_prereqs):
+                    can_enroll = False
+
+            if not can_enroll:
+                continue
+
+            # Add as enrolled
+            takes.append(generate_takes(student_id, section_id, "enrolled", None))
+            enrolled_count += 1
+        
+        # Update student's credit field to match actual completed credits
+        student["credit"] = current_credits
 
     return takes
 
@@ -844,15 +905,14 @@ def generate_university_dataset(
     for course in courses:
         instructor_id = course_to_instructor.get(course["name"], 1)
         room_id = random.choice([loc["room_id"] for loc in locations])
+        # Select a random time slot (which already includes year and semester)
         time_slot = random.choice(time_slots)
-        year = random.choice(YEAR_OPTIONS)
         section = generate_section(
             section_id,
             course["id"],
             instructor_id,
             room_id,
             time_slot["time_slot_id"],
-            year,
         )
         sections.append(section)
         section_id += 1
@@ -860,6 +920,11 @@ def generate_university_dataset(
     prerequisites = generate_prerequisites_data(courses)
 
     takes = generate_takes_data(students, sections, courses, prerequisites)
+    
+    # Clean up temporary _target_credits field from students
+    for student in students:
+        if "_target_credits" in student:
+            del student["_target_credits"]
 
     works = []
 

@@ -50,6 +50,7 @@ def get_by_id(
     try:
         return db.query(model).filter_by(**filters).first()
     except SQLAlchemyError as e:
+        db.rollback()  # Rollback on error to clear transaction state
         raise ValueError(f"Database error: {str(e)}")
 
 
@@ -85,6 +86,7 @@ def get_all(
         
         return query.offset(skip).limit(limit).all()
     except SQLAlchemyError as e:
+        db.rollback()  # Rollback on error to clear transaction state
         raise ValueError(f"Database error: {str(e)}")
 
 
@@ -239,6 +241,7 @@ def count_records(
             query = query.filter_by(**filters)
         return query.count()
     except SQLAlchemyError as e:
+        db.rollback()  # Rollback on error to clear transaction state
         raise ValueError(f"Database error: {str(e)}")
 
 
@@ -265,5 +268,6 @@ def exists(
     try:
         return db.query(model).filter_by(**filters).first() is not None
     except SQLAlchemyError as e:
+        db.rollback()  # Rollback on error to clear transaction state
         raise ValueError(f"Database error: {str(e)}")
 

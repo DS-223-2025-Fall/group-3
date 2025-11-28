@@ -123,7 +123,7 @@ def main():
         print(f"Instructor ID: {sample_section['instructor_id']}")
         print(f"Capacity: {sample_section['capacity']}")
         print(f"Duration: {sample_section['duration']}")
-        print(f"Year: {sample_section['year']}")
+        print(f"Time Slot ID: {sample_section['time_slot_id']}")
         print(f"Room ID: {sample_section['roomID']}")
 
     if len(dataset["time_slot"]) > 0:
@@ -132,6 +132,8 @@ def main():
         print(f"ID: {sample_time_slot['time_slot_id']}")
         print(f"Day: {sample_time_slot['day_of_week']}")
         print(f"Time: {sample_time_slot['start_time']} - {sample_time_slot['end_time']}")
+        print(f"Year: {sample_time_slot['year']}")
+        print(f"Semester: {sample_time_slot['semester']}")
 
     if len(dataset["takes"]) > 0:
         print("\n--- Sample Enrollment (takes) ---")
