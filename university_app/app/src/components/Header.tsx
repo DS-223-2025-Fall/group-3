@@ -14,8 +14,13 @@ export default function Header() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold">Courses by Semester</span>
-            <Button variant="outline" className="bg-yellow-400 text-[#1e3a5f] hover:bg-yellow-500 border-0">
+            <span className="text-lg font-semibold transition-colors duration-200 hover:text-[#ffcc00] cursor-pointer">
+              Courses by Semester
+            </span>
+            <Button
+              variant="outline"
+              className="bg-yellow-400 text-[#1e3a5f] hover:bg-yellow-500 border-0"
+            >
               Log In
             </Button>
           </div>

@@ -7,6 +7,7 @@ import {
 } from './ui/dialog'
 import { Button } from './ui/button'
 import { Course } from '@/lib/api'
+import { getInstructorLinkedIn } from '@/data/instructorLinks'
 
 interface DraftScheduleProps {
   open: boolean
@@ -15,12 +16,29 @@ interface DraftScheduleProps {
   onRemoveCourse: (courseId: string) => void
 }
 
+const parseCourseTime = (timeRange?: string) => {
+  if (!timeRange) return Number.POSITIVE_INFINITY
+  const [start] = timeRange.split('-')
+  if (!start) return Number.POSITIVE_INFINITY
+  const [hours = '0', minutes = '0'] = start.trim().split(':')
+  const hourValue = parseInt(hours, 10)
+  const minuteValue = parseInt(minutes, 10)
+  if (Number.isNaN(hourValue) || Number.isNaN(minuteValue)) {
+    return Number.POSITIVE_INFINITY
+  }
+  return hourValue * 60 + minuteValue
+}
+
 export default function DraftSchedule({
   open,
   onOpenChange,
   selectedCourses,
   onRemoveCourse,
 }: DraftScheduleProps) {
+  const sortedCourses = [...selectedCourses].sort(
+    (a, b) => parseCourseTime(a.time) - parseCourseTime(b.time),
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -32,13 +50,13 @@ export default function DraftSchedule({
         </DialogHeader>
         
         <div className="mt-4 space-y-4">
-          {selectedCourses.length === 0 ? (
+          {sortedCourses.length === 0 ? (
             <p className="text-center text-gray-500 py-8">
               No courses selected yet. Select courses from the table to add them to your schedule.
             </p>
           ) : (
             <div className="space-y-3">
-              {selectedCourses.map((course) => (
+              {sortedCourses.map((course) => (
                 <div
                   key={course.id}
                   className="border rounded-lg p-4 flex justify-between items-start"
@@ -48,7 +66,15 @@ export default function DraftSchedule({
                       {course.code} - {course.name}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      Section {course.section} • {course.instructor}
+                      Section {course.section} •{' '}
+                      <a
+                        href={getInstructorLinkedIn(course.instructor)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#1e3a5f] hover:text-[#2a4f7a] underline-offset-2"
+                      >
+                        {course.instructor}
+                      </a>
                     </p>
                     <p className="text-sm text-gray-600">
                       {course.days} • {course.time}
@@ -84,7 +110,7 @@ export default function DraftSchedule({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          {selectedCourses.length > 0 && (
+          {sortedCourses.length > 0 && (
             <Button className="bg-[#1e3a5f] hover:bg-[#2a4f7a]">
               Save Schedule
             </Button>

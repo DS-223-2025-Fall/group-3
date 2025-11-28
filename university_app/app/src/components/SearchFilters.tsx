@@ -36,19 +36,20 @@ export default function SearchFilters({
 }: SearchFiltersProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Search by Course Name
-          </label>
-          <Input
-            type="text"
-            placeholder="Type course name or code..."
-            value={searchText}
-            onChange={(e) => onSearchTextChange(e.target.value)}
-            className="w-full"
-          />
-        </div>
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="flex-1 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search by Course Name
+            </label>
+            <Input
+              type="text"
+              placeholder="Type course name or code..."
+              value={searchText}
+              onChange={(e) => onSearchTextChange(e.target.value)}
+              className="w-full"
+            />
+          </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -101,13 +102,16 @@ export default function SearchFilters({
             </Select>
           </div>
         </div>
-        
-        <div className="flex gap-4">
-          <Button onClick={onSearch} className="bg-[#1e3a5f] hover:bg-[#2a4f7a]">
+        </div>
+        <div className="flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:gap-4 md:items-end md:justify-end">
+          <Button
+            onClick={onSearch}
+            className="bg-[#1e3a5f] hover:bg-[#2a4f7a] sm:w-auto"
+          >
             <Search className="mr-2 h-4 w-4" />
             Search
           </Button>
-          <Button variant="outline" onClick={onDraftSchedule}>
+          <Button variant="outline" onClick={onDraftSchedule} className="sm:w-auto">
             Draft a Schedule
           </Button>
         </div>

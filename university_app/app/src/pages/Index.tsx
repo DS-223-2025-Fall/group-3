@@ -148,7 +148,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
+        <div className="mb-6 md:ml-6">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
             Courses by Semester
           </h1>
@@ -175,6 +175,7 @@ const Index = () => {
           selectedCourses={selectedCourses}
           onCourseSelect={handleCourseSelect}
           onClusterFilter={handleClusterFilter}
+          showCluster={courseType === 'GenEd'}
         />
 
         <DraftSchedule
