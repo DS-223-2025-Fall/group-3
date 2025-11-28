@@ -12,3 +12,4 @@ site/
 university_app/api/Database/__pycache__/
 university_app/api/__pycache__/
 university_app/notebook/Database/__pycache__/
+university_app/api/syllabi/*.pdf

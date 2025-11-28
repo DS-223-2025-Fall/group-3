@@ -88,6 +88,10 @@ PROGRAMS = [
     "BSE",   # Bachelor of Science in Economics
 ]
 
+# Foundation and General Education programs for courses available to all programs
+FND_PROGRAM = "FND"      # Foundation program (FND prefix courses)
+GENED_PROGRAM = "GENED"  # General Education program (CHSS, CSE courses)
+
 # Department names
 DEPARTMENTS = [
     "Manoogian Simone College of Business and Economics",
@@ -98,13 +102,13 @@ DEPARTMENTS = [
 
 # Mapping course prefixes to programs
 COURSE_PREFIX_TO_PROGRAM = {
-    "CS": "BSCS",   # Computer Science courses -> BSCS
-    "DS": "BSDS",   # Data Science courses -> BSDS
-    "ENGS": "BSES", # Engineering Sciences courses -> BSES
-    "BUS": "BAB",   # Business courses -> BAB
-    "FND": "BAB",   # Foundation courses -> BAB (general foundation)
-    "CHSS": "BAEC", # CHSS courses -> BAEC (can also map to BAPG, using BAEC as default)
-    "CSE": "BSCS",  # CSE courses -> BSCS
+    "CS": "BSCS",
+    "DS": "BSDS",
+    "ENGS": "BSES",
+    "BUS": "BAB",
+    "FND": "BAB",
+    "CHSS": "BAEC",
+    "CSE": "BSCS",
 }
 
 # Course groupings for instructor assignment
@@ -118,25 +122,51 @@ COURSE_GROUPS = {
     "Data_Structures_Algorithms": ["DS 115 Data Structures / Algorithms for Data Science"],
     "Databases": ["DS 205 Databases and Distributed Systems"],
     "AI_ML": ["CS 246 Artificial Intelligence", "CS 251 Machine Learning"],
-    "Business_Analytics": ["BUS 101 Introduction to Business", "DS 227 Business Analytics for Data Science", 
-                          "DS 206 Business Intelligence", "DS 223 Marketing Analytics", 
-                          "DS 207 Time Series Forecasting", "CSE 222 Technology Marketing"],
-    "Biology_Life_Sciences": ["DS 150 Physics & Chemistry in Life Sciences", "DS 151 Cell & Molecular Biology",
-                             "DS 211 Intro to Bioinformatics", "DS 215 Systems Biology", 
-                             "DS 213 Computational Biology"],
+    "Business_Analytics": [
+        "BUS 101 Introduction to Business",
+        "DS 227 Business Analytics for Data Science",
+        "DS 206 Business Intelligence",
+        "DS 223 Marketing Analytics",
+        "DS 207 Time Series Forecasting",
+        "CSE 222 Technology Marketing",
+    ],
+    "Biology_Life_Sciences": [
+        "DS 150 Physics & Chemistry in Life Sciences",
+        "DS 151 Cell & Molecular Biology",
+        "DS 211 Intro to Bioinformatics",
+        "DS 215 Systems Biology",
+        "DS 213 Computational Biology",
+    ],
     "Data_Visualization": ["DS 116 Data Visualization"],
     "Capstone": ["DS 299 Capstone"],
-    "Foundation": ["FND 101 Freshman Seminar 1", "FND 102 Freshman Seminar 2",
-                   "FND 103 Armenian Language & Literature 1", "FND 104 Armenian Language & Literature 2",
-                   "FND 221 Armenian History 1", "FND 222 Armenian History 2",
-                   "FND 110 Physical Education", "FND 152 First Aid", "FND 153 Civil Defence"],
-    "CHSS": ["CHSS 170 Religion in America", "CHSS 184 Social Psychology", "CHSS 203 Philosophy of Mind",
-             "CHSS 205 Learning, activism, and social movements", "CHSS 230 Asian Art",
-             "CHSS 240 Music and Literature", "CHSS 272 Comparative Religion", "CHSS 283 Trust",
-             "CHSS 296 Special Topics in Social Sciences: Critical Thinking for the Digital Era"],
-    "CSE_Other": ["CSE 145 Geographic Information Systems", "CSE 175 Relativity",
-                  "CSE 181 Creativity and Technological Innovation", 
-                  "CSE 210 Historical Development of Mathematical Ideas"],
+    "Foundation": [
+        "FND 101 Freshman Seminar 1",
+        "FND 102 Freshman Seminar 2",
+        "FND 103 Armenian Language & Literature 1",
+        "FND 104 Armenian Language & Literature 2",
+        "FND 221 Armenian History 1",
+        "FND 222 Armenian History 2",
+        "FND 110 Physical Education",
+        "FND 152 First Aid",
+        "FND 153 Civil Defence",
+    ],
+    "CHSS": [
+        "CHSS 170 Religion in America",
+        "CHSS 184 Social Psychology",
+        "CHSS 203 Philosophy of Mind",
+        "CHSS 205 Learning, activism, and social movements",
+        "CHSS 230 Asian Art",
+        "CHSS 240 Music and Literature",
+        "CHSS 272 Comparative Religion",
+        "CHSS 283 Trust",
+        "CHSS 296 Special Topics in Social Sciences: Critical Thinking for the Digital Era",
+    ],
+    "CSE_Other": [
+        "CSE 145 Geographic Information Systems",
+        "CSE 175 Relativity",
+        "CSE 181 Creativity and Technological Innovation",
+        "CSE 210 Historical Development of Mathematical Ideas",
+    ],
 }
 
 # Map course groups to departments
@@ -189,32 +219,46 @@ COURSES_WITH_CLUSTERS = {
 
 
 def get_program_from_course(course_name):
-    """Extract program from course name based on prefix."""
+    """
+    Description: Infer a program code from a course name prefix.
+    inputs: course_name (str) – full course name (e.g., 'CS 100 Calculus 1').
+    return: Program code (str), defaulting to 'BAB' if prefix is unknown.
+    """
     parts = course_name.split()
     if len(parts) > 0:
         prefix = parts[0]
-        return COURSE_PREFIX_TO_PROGRAM.get(prefix, "BAB")  # Default to BAB if unknown
+        return COURSE_PREFIX_TO_PROGRAM.get(prefix, "BAB")
     return "BAB"
 
 
-def generate_student(student_id):
-    """Generate a student record - 10 students with credits 0-100. #TODO: MVP - minimal students, can expand in future"""
+def generate_student(student_id, program_name=None):
+    """
+    Description: Generate a student record with a random name, credits, and program name.
+    inputs: student_id (int) – sequential student identifier, program_name (str) – program name.
+    return: Dict with keys 'id', 'name', 'credit', and 'program_name'.
+    """
+    if program_name is None:
+        program_name = "BSDS"  # For MVP product, lets assume all students are in BSDS program
     return {
         "id": student_id,
         "name": fake.name(),
-        "credit": random.randint(0, 100)
+        "credit": random.randint(0, 100),
+        "program_name": program_name,
     }
 
 
 def generate_location(room_id):
-    """Generate a location record - Main or PAB building, rooms 100-400."""
+    """
+    Description: Generate a location record for a room in Main or PAB.
+    inputs: room_id (int) – numeric room identifier (e.g., 101).
+    return: Dict with keys 'room_id' and 'building_room_name'.
+    """
     building = random.choice(BUILDINGS)
-    # Use room_id directly (should be in 100-400 range)
     building_room_name = f"{building} {room_id}"
-    
+
     return {
         "room_id": room_id,
-        "building_room_name": building_room_name
+        "building_room_name": building_room_name,
     }
 
 
@@ -245,149 +289,149 @@ FIXED_INSTRUCTORS = [
 
 def generate_fixed_instructors(locations):
     """
-    Use the real AUA instructors with real bios.
-    Assign each to a random existing room_id from locations.
-    
-    Args:
-        locations: List of location dictionaries
-    
-    Returns:
-        List of instructor dictionaries with room_id assigned
+    Description: Attach real AUA instructors to random rooms from existing locations.
+    inputs: locations (list[dict]) – location records containing 'room_id'.
+    return: List of instructor dicts with 'id', 'name', 'bio_url', and 'room_id'.
     """
     room_ids = [loc["room_id"] for loc in locations]
     instructors = []
     for prof in FIXED_INSTRUCTORS:
-        instructors.append({
-            "id": prof["id"],
-            "name": prof["name"],
-            "bio_url": prof["bio_url"],
-            "room_id": random.choice(room_ids),
-        })
+        instructors.append(
+            {
+                "id": prof["id"],
+                "name": prof["name"],
+                "bio_url": prof["bio_url"],
+                "room_id": random.choice(room_ids),
+            }
+        )
     return instructors
 
 
 def build_course_to_instructor_map():
     """
-    Map each course (by name) to one of the fixed instructors:
-    - Karen Hovhannisyan (id: 1) -> DS 223 Marketing Analytics
-    - Sachin Kumar (id: 3) -> DS 207 Time Series Forecasting
-    - Nune Gevorgyan (id: 2) -> CS 100/101/102 (Calculus 1/2/3)
-    - Zaruhi Karabekian (id: 4) -> CHSS 203 Philosophy of Mind
-    - All other courses -> random one of the four
-    
-    Returns:
-        Dictionary mapping course name to instructor ID
+    Description: Map each course name to an instructor ID, using fixed assignments and random fallback.
+    inputs: None; uses global COURSES and FIXED_INSTRUCTORS.
+    return: Dict mapping course_name (str) -> instructor_id (int).
     """
     course_to_instructor = {}
     for course_name in COURSES:
         if course_name == "DS 223 Marketing Analytics":
-            course_to_instructor[course_name] = 1  # Karen
+            course_to_instructor[course_name] = 1
         elif course_name == "DS 207 Time Series Forecasting":
-            course_to_instructor[course_name] = 3  # Sachin
+            course_to_instructor[course_name] = 3
         elif course_name in (
             "CS 100 Calculus 1",
             "CS 101 Calculus 2",
             "CS 102 Calculus 3",
         ):
-            course_to_instructor[course_name] = 2  # Nune
+            course_to_instructor[course_name] = 2
         elif course_name == "CHSS 203 Philosophy of Mind":
-            course_to_instructor[course_name] = 4  # Zaruhi
+            course_to_instructor[course_name] = 4
         else:
-            # For all remaining courses, just reuse any of the four instructors
             course_to_instructor[course_name] = random.choice([1, 2, 3, 4])
     return course_to_instructor
 
 
 def generate_instructor(instructor_id):
     """
-    DEPRECATED: Use generate_fixed_instructors() instead.
-    This function is kept for backward compatibility but should not be used.
+    Description: Deprecated random instructor generator; prefer generate_fixed_instructors().
+    inputs: instructor_id (int) – identifier for the instructor.
+    return: Dict with 'id', 'name', 'bio_url', and 'room_id'.
     """
     first_name = fake.first_name()
     last_name = fake.last_name()
     name = f"{first_name} {last_name}"
-    
-    # Generate random bio URL
+
     bio_url_patterns = [
         f"https://www.university.edu/faculty/{first_name.lower()}.{last_name.lower()}",
         f"https://www.university.edu/people/{last_name.lower()}-{first_name.lower()}",
         f"https://www.university.edu/instructors/{last_name.lower()}",
         f"https://www.university.edu/department/faculty/{last_name.lower()}",
-        f"https://faculty.university.edu/{last_name.lower()}"
+        f"https://faculty.university.edu/{last_name.lower()}",
     ]
     bio_url = random.choice(bio_url_patterns)
-    
-    # Random room_id (100-400)
+
     room_id = random.randint(100, 400)
-    
+
     return {
         "id": instructor_id,
         "name": name,
         "bio_url": bio_url,
-        "room_id": room_id
+        "room_id": room_id,
     }
 
 
 def generate_department(dept_name, room_id):
-    """Generate a department record."""
+    """
+    Description: Generate a department record with a main office location.
+    inputs: dept_name (str), room_id (int) for the department office.
+    return: Dict with 'dept_name' and 'roomID'.
+    """
     return {
         "dept_name": dept_name,
-        "roomID": room_id
+        "roomID": room_id,
     }
 
 
-def generate_program(prog_name, dept_name, student_id):
-    """Generate a program record."""
+def generate_program(prog_name, dept_name):
+    """
+    Description: Generate a program record for a department program.
+    inputs: prog_name (str), dept_name (str).
+    return: Dict with 'prog_name' and 'dept_name'.
+    """
     return {
         "prog_name": prog_name,
         "dept_name": dept_name,
-        "student_id": student_id
     }
 
 
 def generate_course(course_id, course_name):
-    """Generate a course record from the provided course list."""
-    # Determine credits (typically 3 for most courses, 1-2 for seminars/PE) #TODO: MVP - random credits, can make more structured based on actual course requirements in future
-    if "Seminar" in course_name or "Physical Education" in course_name or "First Aid" in course_name or "Civil Defence" in course_name:
+    """
+    Description: Generate a course record with credits.
+    inputs: course_id (int), course_name (str).
+    return: Dict with 'id', 'name', and 'credits'.
+    """
+    if (
+        "Seminar" in course_name
+        or "Physical Education" in course_name
+        or "First Aid" in course_name
+        or "Civil Defence" in course_name
+    ):
         credits = random.choice([1, 2])
     else:
         credits = random.choice([3, 4])
-    
-    # Cluster numbers - courses belong to ALL specified clusters
-    # Store as comma-separated string (e.g., "1,2,3,4,6")
-    if course_name in COURSES_WITH_CLUSTERS:
-        cluster_numbers = COURSES_WITH_CLUSTERS[course_name]
-        cluster_number = ",".join(map(str, sorted(cluster_numbers)))  # Sort for consistency
-    else:
-        cluster_number = None
-    
+
     return {
         "id": course_id,
         "name": course_name,
         "credits": credits,
-        "cluster_number": cluster_number
     }
 
 
 def generate_time_slot(time_slot_id, day_of_week, start_time, end_time):
-    """Generate a time_slot record."""
+    """
+    Description: Generate a time_slot record with day and formatted start/end times.
+    inputs: time_slot_id (int), day_of_week (str), start_time (datetime.time), end_time (datetime.time).
+    return: Dict with 'time_slot_id', 'day_of_week', 'start_time', and 'end_time'.
+    """
     return {
         "time_slot_id": time_slot_id,
         "day_of_week": day_of_week,
         "start_time": start_time.strftime("%H:%M:%S"),
-        "end_time": end_time.strftime("%H:%M:%S")
+        "end_time": end_time.strftime("%H:%M:%S"),
     }
 
 
 def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id, year):
-    """Generate a section record - capacity 30, duration 6/8/12 weeks, year 2023/2024/2025."""
-    capacity = 30  # Always 30 #TODO: MVP - fixed capacity, can vary by course type in future
+    """
+    Description: Generate a course section record with fixed capacity and a syllabus URL.
+    inputs: section_id, course_id, instructor_id, room_id, time_slot_id (ints), year (int).
+    return: Dict with section metadata including 'capacity', 'duration', and 'syllabus_url'.
+    """
+    capacity = 30
     duration = random.choice(DURATION_OPTIONS)
-    # Syllabus URL path matching Docker volume structure
-    # Files will be stored in /api/syllabi/ in the container, served at /syllabi/ endpoint
-    # Section number is always 1 since we have 1 section per course #TODO: Maybe in future we can have more
     syllabus_url = f"/syllabi/course_{course_id}_section_1.pdf"
-    
+
     return {
         "id": section_id,
         "capacity": capacity,
@@ -397,157 +441,186 @@ def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id
         "time_slot_id": time_slot_id,
         "course_id": course_id,
         "instructor_id": instructor_id,
-        "syllabus_url": syllabus_url
+        "syllabus_url": syllabus_url,
     }
 
 
 def generate_prerequisites(course_id, prerequisite_id):
-    """Generate a prerequisites record."""
+    """
+    Description: Generate a prerequisites record linking a course to its prerequisite.
+    inputs: course_id (int), prerequisite_id (int).
+    return: Dict with 'course_id' and 'prerequisite_id'.
+    """
     return {
         "course_id": course_id,
-        "prerequisite_id": prerequisite_id
+        "prerequisite_id": prerequisite_id,
     }
 
 
 def generate_takes(student_id, section_id, status="enrolled", grade=None):
     """
-    Generate a takes record (student enrollment).
-    
-    Args:
-        student_id: Student ID
-        section_id: Section ID
-        status: Enrollment status ('enrolled', 'completed', 'dropped')
-        grade: Grade (e.g., 'A', 'B+', 'F', 'P', 'NP') or None for enrolled courses
+    Description: Generate a takes record representing a student's enrollment in a section.
+    inputs: student_id (int), section_id (int), status (str), grade (str or None).
+    return: Dict with 'student_id', 'section_id', 'status', and 'grade'.
     """
     return {
         "student_id": student_id,
         "section_id": section_id,
         "status": status,
-        "grade": grade
+        "grade": grade,
     }
 
 
 def generate_works(dept_name, instructor_id):
-    """Generate a works record (instructor-department relationship)."""
+    """
+    Description: Generate a works record linking an instructor to a department.
+    inputs: dept_name (str), instructor_id (int).
+    return: Dict with 'dept_name' and 'instructorid'.
+    """
     return {
         "dept_name": dept_name,
-        "instructorid": instructor_id
+        "instructorid": instructor_id,
     }
 
 
 def generate_hascourse(prog_name, course_id):
-    """Generate a hascourse record (program-course relationship)."""
+    """
+    Description: Generate a hascourse record linking a program to a course.
+    inputs: prog_name (str), course_id (int).
+    return: Dict with 'prog_name' and 'courseid'.
+    """
     return {
         "prog_name": prog_name,
-        "courseid": course_id
+        "courseid": course_id,
     }
 
 
 def generate_cluster(cluster_id, cluster_number, prog_name, description=None):
-    """Generate a cluster record."""
+    """
+    Description: Generate a cluster record for a given program and cluster number.
+    inputs: cluster_id (int), cluster_number (int), prog_name (str), description (str or None).
+    return: Dict with cluster metadata including 'prog_name' and 'description'.
+    """
     return {
         "cluster_id": cluster_id,
         "cluster_number": cluster_number,
         "prog_name": prog_name,
-        "description": description
+        "description": description,
     }
 
 
 def generate_course_cluster(course_id, cluster_id):
-    """Generate a course_cluster record (course-cluster relationship)."""
+    """
+    Description: Generate a course_cluster record linking a course to a cluster.
+    inputs: course_id (int), cluster_id (int).
+    return: Dict with 'course_id' and 'cluster_id'.
+    """
     return {
         "course_id": course_id,
-        "cluster_id": cluster_id
+        "cluster_id": cluster_id,
     }
 
 
-def generate_preferred(student_id, cluster_id, preference_order=None):
-    """Generate a preferred record (student-cluster preference)."""
+def generate_preferred(student_id, course_id):
+    """
+    Description: Generate a preferred record expressing a student's course preference.
+    inputs: student_id (int), course_id (int).
+    return: Dict with 'student_id' and 'course_id'.
+    """
     return {
         "student_id": student_id,
-        "cluster_id": cluster_id,
-        "preference_order": preference_order
+        "course_id": course_id,
     }
 
 
 def generate_time_slots():
     """
-    Generate time slots for MWF and T/Th schedule patterns.
-    Monday, Wednesday, Friday (50-minute classes):
-    - 8:30-9:20, 9:30-10:20, 10:30-11:20, 11:30-12:20, 12:30-13:20, 13:30-14:20, 14:30-15:20, 15:30-16:20, 16:30-17:20, 17:30-18:20, 18:30-19:20, 19:30-20:00
-    
-    Tuesday, Thursday (75-minute classes):
-    - 9:00-10:15, 10:30-11:45, 12:00-13:15, 13:30-14:45, 15:00-16:15, 16:30-17:45, 18:00-19:15, 19:30-20:00
-    All classes end by 8 PM (20:00)
+    Description: Generate all MWF and T/Th time slot records for a weekly schedule.
+    inputs: None; uses fixed patterns for days and time ranges.
+    return: List of time_slot dicts with IDs, days, and start/end times.
     """
     time_slots = []
     time_slot_id = 1
-    
-    # MWF schedule (50-minute classes, starting at :30, ending at :20 of next hour)
-    # All classes run until 8 PM
+
+    # MWF schedule (50-minute classes)
     mwf_days = ["Mon", "Wed", "Fri"]
     mwf_start_times = [
-        (8, 30), (9, 30), (10, 30), (11, 30),
-        (12, 30), (13, 30), (14, 30), (15, 30),
-        (16, 30), (17, 30), (18, 30), (19, 30)
+        (8, 30),
+        (9, 30),
+        (10, 30),
+        (11, 30),
+        (12, 30),
+        (13, 30),
+        (14, 30),
+        (15, 30),
+        (16, 30),
+        (17, 30),
+        (18, 30),
+        (19, 30),
     ]
     mwf_end_times = [
-        (9, 20), (10, 20), (11, 20), (12, 20),
-        (13, 20), (14, 20), (15, 20), (16, 20),
-        (17, 20), (18, 20), (19, 20), (20, 20)  
+        (9, 20),
+        (10, 20),
+        (11, 20),
+        (12, 20),
+        (13, 20),
+        (14, 20),
+        (15, 20),
+        (16, 20),
+        (17, 20),
+        (18, 20),
+        (19, 20),
+        (20, 20),
     ]
-    
+
     for day in mwf_days:
         for i in range(len(mwf_start_times)):
             start_time = time(mwf_start_times[i][0], mwf_start_times[i][1])
             end_time = time(mwf_end_times[i][0], mwf_end_times[i][1])
             time_slots.append(generate_time_slot(time_slot_id, day, start_time, end_time))
             time_slot_id += 1
-    
+
     # T/Th schedule (75-minute classes)
-    # Pattern: class 9:00-10:15, break 10:15-10:30, class 10:30-11:45, break 11:45-12:00, etc.
-    # All classes end by 8 PM
     tth_days = ["Tue", "Thu"]
     tth_start_times = [
-        (9, 0), (10, 30), (12, 0), (13, 30),
-        (15, 0), (16, 30), (18, 0), (19, 30)
+        (9, 0),
+        (10, 30),
+        (12, 0),
+        (13, 30),
+        (15, 0),
+        (16, 30),
+        (18, 0),
+        (19, 30),
     ]
     tth_end_times = [
-        (10, 15), (11, 45), (13, 15), (14, 45),
-        (16, 15), (17, 45), (19, 15), (20, 45)  
+        (10, 15),
+        (11, 45),
+        (13, 15),
+        (14, 45),
+        (16, 15),
+        (17, 45),
+        (19, 15),
+        (20, 45),
     ]
-    
+
     for day in tth_days:
         for i in range(len(tth_start_times)):
             start_time = time(tth_start_times[i][0], tth_start_times[i][1])
             end_time = time(tth_end_times[i][0], tth_end_times[i][1])
             time_slots.append(generate_time_slot(time_slot_id, day, start_time, end_time))
             time_slot_id += 1
-    
+
     return time_slots
 
 
 def generate_takes_data(students, sections, courses, prerequisites):
     """
-    Generate takes (enrollments) data respecting prerequisites.
-    
-    Logic:
-    - Students can enroll in courses with no prerequisites
-    - Students can only enroll in courses if they've completed all prerequisites
-    - Generate a mix of 'enrolled', 'completed', and 'dropped' statuses
-    - Completed courses have grades, enrolled courses don't, dropped courses may have F/NP
-    
-    Args:
-        students: List of student dictionaries
-        sections: List of section dictionaries
-        courses: List of course dictionaries
-        prerequisites: List of prerequisite dictionaries
-    
-    Returns:
-        List of takes dictionaries with status and grade
+    Description: Generate takes records (enrollments) per student while respecting prerequisites.
+    inputs: students, sections, courses, prerequisites (lists of dicts as generated above).
+    return: List of takes dicts with status/grade, ensuring prerequisite completion logic.
     """
     takes = []
-    
+
     # Build prerequisite map: course_id -> list of prerequisite course_ids
     prereq_map = {}
     for prereq in prerequisites:
@@ -556,190 +629,183 @@ def generate_takes_data(students, sections, courses, prerequisites):
         if course_id not in prereq_map:
             prereq_map[course_id] = []
         prereq_map[course_id].append(prereq_id)
-    
+
     # Build section to course mapping
     section_to_course = {section["id"]: section["course_id"] for section in sections}
-    
-    # Grade options
+
     grades = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F", "P", "NP"]
-    passing_grades = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "P"]
-    
-    # For each student, generate enrollments
+
     for student in students:
         student_id = student["id"]
-        completed_courses = set()  # Track courses this student has completed
-        
-        # Generate 3-8 enrollments per student
+        completed_courses = set()
+
         num_enrollments = random.randint(3, 8)
         available_sections = sections.copy()
         random.shuffle(available_sections)
-        
+
         enrollments_created = 0
-        
+
         for section in available_sections:
             if enrollments_created >= num_enrollments:
                 break
-            
+
             section_id = section["id"]
             course_id = section_to_course[section_id]
-            
-            # Check if student can enroll (has prerequisites or no prerequisites needed)
+
             can_enroll = True
             if course_id in prereq_map:
-                # Check if student has completed all prerequisites
                 required_prereqs = prereq_map[course_id]
                 if not all(prereq_id in completed_courses for prereq_id in required_prereqs):
                     can_enroll = False
-            
+
             if not can_enroll:
                 continue
-            
-            # Determine status and grade
+
             status_choice = random.choices(
                 ["completed", "enrolled", "dropped"],
-                weights=[40, 50, 10],  # 40% completed, 50% enrolled, 10% dropped
-                k=1
+                weights=[40, 50, 10],
+                k=1,
             )[0]
-            
+
             if status_choice == "completed":
-                # Completed courses have grades
                 grade = random.choice(grades)
                 takes.append(generate_takes(student_id, section_id, "completed", grade))
-                completed_courses.add(course_id)  # Mark as completed
+                completed_courses.add(course_id)
                 enrollments_created += 1
-                
+
             elif status_choice == "enrolled":
-                # Enrolled courses don't have grades yet
                 takes.append(generate_takes(student_id, section_id, "enrolled", None))
                 enrollments_created += 1
-                
+
             elif status_choice == "dropped":
-                # Dropped courses may have F or NP, or no grade
                 grade_choice = random.choice([None, "F", "NP"])
                 takes.append(generate_takes(student_id, section_id, "dropped", grade_choice))
                 enrollments_created += 1
-    
+
     return takes
 
 
 def generate_prerequisites_data(courses):
     """
-    Generate prerequisites based on requirements. #TODO: MVP - minimal prerequisite set, can expand with more course dependencies in future
-    - Calculus courses have each other as prerequisites
-    - Numerical Methods should have Linear Algebra as prerequisite
-    - Statistics 1 should have Probability as prerequisite
-    - Statistics 2 should have Statistics 1 as prerequisite
-    - Programming for Data Science should have CS110 as prerequisite
+    Description: Generate a minimal prerequisite set based on course names and simple rules.
+    inputs: courses (list[dict]) – course records with 'id' and 'name'.
+    return: List of prerequisite dicts produced by generate_prerequisites().
     """
     prerequisites = []
     course_name_to_id = {course["name"]: course["id"] for course in courses}
-    
-    # Calculus prerequisites: Calc 2 needs Calc 1, Calc 3 needs Calc 2
+
+    # Calculus chain
     if "CS 100 Calculus 1" in course_name_to_id and "CS 101 Calculus 2" in course_name_to_id:
-        prerequisites.append(generate_prerequisites(
-            course_name_to_id["CS 101 Calculus 2"],
-            course_name_to_id["CS 100 Calculus 1"]
-        ))
-    
+        prerequisites.append(
+            generate_prerequisites(
+                course_name_to_id["CS 101 Calculus 2"],
+                course_name_to_id["CS 100 Calculus 1"],
+            )
+        )
+
     if "CS 101 Calculus 2" in course_name_to_id and "CS 102 Calculus 3" in course_name_to_id:
-        prerequisites.append(generate_prerequisites(
-            course_name_to_id["CS 102 Calculus 3"],
-            course_name_to_id["CS 101 Calculus 2"]
-        ))
-    
+        prerequisites.append(
+            generate_prerequisites(
+                course_name_to_id["CS 102 Calculus 3"],
+                course_name_to_id["CS 101 Calculus 2"],
+            )
+        )
+
     # Numerical Methods needs Linear Algebra
     if "ENGS 211 Numerical Methods" in course_name_to_id and "CS 104 Linear Algebra" in course_name_to_id:
-        prerequisites.append(generate_prerequisites(
-            course_name_to_id["ENGS 211 Numerical Methods"],
-            course_name_to_id["CS 104 Linear Algebra"]
-        ))
-    
+        prerequisites.append(
+            generate_prerequisites(
+                course_name_to_id["ENGS 211 Numerical Methods"],
+                course_name_to_id["CS 104 Linear Algebra"],
+            )
+        )
+
     # Statistics 1 needs Probability
     if "CS 108 Statistics 1" in course_name_to_id and "CS 107 Probability" in course_name_to_id:
-        prerequisites.append(generate_prerequisites(
-            course_name_to_id["CS 108 Statistics 1"],
-            course_name_to_id["CS 107 Probability"]
-        ))
-    
+        prerequisites.append(
+            generate_prerequisites(
+                course_name_to_id["CS 108 Statistics 1"],
+                course_name_to_id["CS 107 Probability"],
+            )
+        )
+
     # Statistics 2 needs Statistics 1
     if "DS 110 Statistics 2" in course_name_to_id and "CS 108 Statistics 1" in course_name_to_id:
-        prerequisites.append(generate_prerequisites(
-            course_name_to_id["DS 110 Statistics 2"],
-            course_name_to_id["CS 108 Statistics 1"]
-        ))
-    
+        prerequisites.append(
+            generate_prerequisites(
+                course_name_to_id["DS 110 Statistics 2"],
+                course_name_to_id["CS 108 Statistics 1"],
+            )
+        )
+
     # Programming for Data Science needs CS110
-    if "DS 120 Programming for Data Science" in course_name_to_id and "CS 110 Intro to Computer Science" in course_name_to_id:
-        prerequisites.append(generate_prerequisites(
-            course_name_to_id["DS 120 Programming for Data Science"],
-            course_name_to_id["CS 110 Intro to Computer Science"]
-        ))
-    
-    # Additional logic: Advanced courses typically need intro courses
-    # Machine Learning might need Linear Algebra
+    if (
+        "DS 120 Programming for Data Science" in course_name_to_id
+        and "CS 110 Intro to Computer Science" in course_name_to_id
+    ):
+        prerequisites.append(
+            generate_prerequisites(
+                course_name_to_id["DS 120 Programming for Data Science"],
+                course_name_to_id["CS 110 Intro to Computer Science"],
+            )
+        )
+
+    # Optional advanced prerequisites
     if "CS 251 Machine Learning" in course_name_to_id and "CS 104 Linear Algebra" in course_name_to_id:
-        if random.choice([True, False]):  # 50% chance
-            prerequisites.append(generate_prerequisites(
-                course_name_to_id["CS 251 Machine Learning"],
-                course_name_to_id["CS 104 Linear Algebra"]
-            ))
-    
-    # AI might need Discrete Math
+        if random.choice([True, False]):
+            prerequisites.append(
+                generate_prerequisites(
+                    course_name_to_id["CS 251 Machine Learning"],
+                    course_name_to_id["CS 104 Linear Algebra"],
+                )
+            )
+
     if "CS 246 Artificial Intelligence" in course_name_to_id and "CS 111 Discrete Math" in course_name_to_id:
-        if random.choice([True, False]):  # 50% chance
-            prerequisites.append(generate_prerequisites(
-                course_name_to_id["CS 246 Artificial Intelligence"],
-                course_name_to_id["CS 111 Discrete Math"]
-            ))
-    
+        if random.choice([True, False]):
+            prerequisites.append(
+                generate_prerequisites(
+                    course_name_to_id["CS 246 Artificial Intelligence"],
+                    course_name_to_id["CS 111 Discrete Math"],
+                )
+            )
+
     return prerequisites
 
 
 def generate_university_dataset(
-    num_students=10,  # TODO: MVP - minimal students, can expand in future
-    num_locations=50,  # TODO: MVP - limited locations, can add more buildings/rooms in future
-    num_sections_per_course=1,  # TODO: MVP - 1 section per course, can add multiple sections in future
-    current_year=2025
+    num_students=10,
+    num_locations=50,
+    num_sections_per_course=1,
+    current_year=2025,
 ):
     """
-    Generate a complete university dataset according to ERD.
-    
-    Returns a dictionary with all tables as lists of dictionaries.
+    Description: Generate a full synthetic university dataset consistent with the ERD.
+    inputs: num_students (int), num_locations (int), num_sections_per_course (int), current_year (int).
+    return: Dict mapping table names (str) to lists of row dicts (students, courses, sections, etc.).
     """
-    # Generate students (10 students, credits 0-100) #TODO: MVP - minimal students
-    students = [generate_student(i) for i in range(1, num_students + 1)]
-    
-    # Generate locations (Main and PAB, rooms 100-400) #TODO: MVP - only 2 buildings, can add more in future
-    # Generate unique room IDs in the 100-400 range
-    room_ids = random.sample(range(100, 401), min(num_locations, 301))
+    # Generate sequential room_ids starting from 1
+    room_ids = list(range(1, num_locations + 1))
     locations = [generate_location(room_id) for room_id in room_ids]
-    
-    # Generate fixed instructors (AUA faculty) #TODO: MVP - using 4 fixed instructors, can add more in future
+
     instructors = generate_fixed_instructors(locations)
-    
-    # Build course-to-instructor mapping using fixed instructors
+
     course_to_instructor = build_course_to_instructor_map()
-    
+
     num_instructors = len(instructors)
-    
-    # Generate courses from the provided list #TODO: MVP - fixed course list (51 courses), can expand with more courses in future
+
     courses = []
     for idx, course_name in enumerate(COURSES, start=1):
         courses.append(generate_course(idx, course_name))
-    
-    # Generate time slots (MWF schedule pattern)
+
     time_slots = generate_time_slots()
-    
-    # Generate departments (4 specific departments)
+
     departments = []
     dept_locations = {}
     for i, dept_name in enumerate(DEPARTMENTS):
         room_id = locations[i % len(locations)]["room_id"]
         dept_locations[dept_name] = room_id
         departments.append(generate_department(dept_name, room_id))
-    
-    # Generate programs (assign to students and departments) #TODO: MVP - minimal student-program assignments, can expand in future
-    # Ensure all students are assigned to at least one program
+
     programs = []
     program_to_dept = {
         "BAB": "Manoogian Simone College of Business and Economics",
@@ -751,69 +817,62 @@ def generate_university_dataset(
         "BSN": "Turpanjian College of Health Sciences",
         "BSESS": "Akian College of Science and Engineering",
         "BSE": "Manoogian Simone College of Business and Economics",
+        "FND": "College of Humanities and Social Sciences",    # Foundation program
+        "GENED": "College of Humanities and Social Sciences",  # General Education program
     }
+
+    # All students are assigned to BSDS program
+    student_program_map = {}
+    bsds_dept_name = program_to_dept["BSDS"]
+    fnd_dept_name = program_to_dept["FND"]
+    gened_dept_name = program_to_dept["GENED"]
     
-    # First, assign each student to at least one program
-    student_program_assigned = set()
-    student_id = 1
-    for prog_name in PROGRAMS:
-        dept_name = program_to_dept[prog_name]
-        # Assign program to current student, cycling through all students
-        programs.append(generate_program(prog_name, dept_name, student_id))
-        student_program_assigned.add(student_id)
-        student_id = (student_id % num_students) + 1  # Cycle through students 1-10
+    # Create program entries for BSDS, FND, and GENED
+    programs.append(generate_program("BSDS", bsds_dept_name))
+    programs.append(generate_program("FND", fnd_dept_name))
+    programs.append(generate_program("GENED", gened_dept_name))
     
-    # Ensure all students are assigned (if any are missing, assign them to remaining programs)
-    unassigned_students = set(range(1, num_students + 1)) - student_program_assigned
-    if unassigned_students:
-        # Assign remaining students to programs (can have multiple students per program)
-        for student_id in unassigned_students:
-            # Assign to a random program
-            prog_name = random.choice(PROGRAMS)
-            dept_name = program_to_dept[prog_name]
-            programs.append(generate_program(prog_name, dept_name, student_id))
+    # Assign all students to BSDS
+    for student_id in range(1, num_students + 1):
+        student_program_map[student_id] = "BSDS"
     
-    # Generate sections for each course - exactly 1 section per course #TODO: MVP - 1 section per course, can add multiple sections in future
+    # Generate students with their program names (all BSDS)
+    students = [generate_student(i, "BSDS") for i in range(1, num_students + 1)]
+
     sections = []
     section_id = 1
     for course in courses:
-        # Get the instructor assigned to this course group
         instructor_id = course_to_instructor.get(course["name"], 1)
-        # Use a room_id from existing locations
         room_id = random.choice([loc["room_id"] for loc in locations])
         time_slot = random.choice(time_slots)
         year = random.choice(YEAR_OPTIONS)
         section = generate_section(
-            section_id, course["id"], instructor_id,
-            room_id, time_slot["time_slot_id"], year
+            section_id,
+            course["id"],
+            instructor_id,
+            room_id,
+            time_slot["time_slot_id"],
+            year,
         )
         sections.append(section)
         section_id += 1
-    
-    # Generate prerequisites #TODO: MVP - minimal prerequisite set
+
     prerequisites = generate_prerequisites_data(courses)
-    
-    # Generate takes (student enrollments) with status and grade, respecting prerequisites
+
     takes = generate_takes_data(students, sections, courses, prerequisites)
-    
-    # Generate works (instructor-department relationships) #TODO: MVP - 1 department per instructor, can add multiple departments per instructor in future
-    # Map each fixed instructor to their department based on their primary courses
+
     works = []
-    
-    # Map instructors to departments based on their assigned courses
-    # Use the most common department from all courses they teach
+
     instructor_to_dept = {}
-    instructor_dept_counts = {}  # Track department frequency for each instructor
-    
+    instructor_dept_counts = {}
+
     for course_name, instructor_id in course_to_instructor.items():
-        # Find which department this course belongs to
         dept_name = None
         for group_name, course_list in COURSE_GROUPS.items():
             if course_name in course_list:
                 dept_name = COURSE_GROUP_TO_DEPT.get(group_name, "Akian College of Science and Engineering")
                 break
-        
-        # If not found in groups, use prefix-based mapping
+
         if not dept_name:
             prefix = course_name.split()[0] if course_name.split() else ""
             if prefix in ["CS", "DS", "ENGS", "CSE"]:
@@ -823,37 +882,57 @@ def generate_university_dataset(
             elif prefix in ["CHSS", "FND"]:
                 dept_name = "College of Humanities and Social Sciences"
             else:
-                dept_name = "Akian College of Science and Engineering"  # Default
-        
-        # Count departments for each instructor
+                dept_name = "Akian College of Science and Engineering"
+
         if instructor_id not in instructor_dept_counts:
             instructor_dept_counts[instructor_id] = {}
-        instructor_dept_counts[instructor_id][dept_name] = instructor_dept_counts[instructor_id].get(dept_name, 0) + 1
-    
-    # Assign each instructor to their most common department
+        instructor_dept_counts[instructor_id][dept_name] = (
+            instructor_dept_counts[instructor_id].get(dept_name, 0) + 1
+        )
+
     for instructor_id, dept_counts in instructor_dept_counts.items():
-        # Get the department with the highest count
         most_common_dept = max(dept_counts.items(), key=lambda x: x[1])[0]
         instructor_to_dept[instructor_id] = most_common_dept
-    
-    # Generate works records for each instructor
+
     for instructor_id in range(1, num_instructors + 1):
         dept_name = instructor_to_dept.get(instructor_id, "Akian College of Science and Engineering")
         works.append(generate_works(dept_name, instructor_id))
-    
-    # Generate hascourse (program-course relationships) #TODO: MVP - random assignment, can make more structured/realistic in future
+
     hascourse = []
-    for program in programs:
-        prog_name = program["prog_name"]
-        # Each program has multiple courses
-        num_courses_in_program = random.randint(10, 20)
-        program_courses = random.sample(
-            range(1, len(courses) + 1),
-            min(num_courses_in_program, len(courses))
-        )
-        for course_id in program_courses:
-            hascourse.append(generate_hascourse(prog_name, course_id))
+    # For BSDS program: assign first 27 courses (BSDS courses)
+    bsds_course_ids = list(range(1, 28))  # Courses 1-27 are BSDS courses
+    for course_id in bsds_course_ids:
+        hascourse.append(generate_hascourse("BSDS", course_id))
     
+    # For FND program: assign FND courses (28-36) - Foundation courses
+    fnd_course_ids = list(range(28, 37))  # Courses 28-36 are FND courses
+    for course_id in fnd_course_ids:
+        hascourse.append(generate_hascourse("FND", course_id))
+    
+    # For GENED program: assign remaining courses (37-51) - General Education (CHSS, CSE)
+    gened_course_ids = list(range(37, len(courses) + 1))  # Courses 37-51
+    for course_id in gened_course_ids:
+        hascourse.append(generate_hascourse("GENED", course_id))
+    
+    # Some courses belong to both BSDS and GENED (cross-listed courses)
+    # These are typically foundational courses that count toward both major and general education
+    # Examples: Calculus, Statistics, Linear Algebra, Intro CS, Discrete Math
+    bsds_gened_shared_courses = [
+        1,   # CS 100 Calculus 1
+        2,   # CS 101 Calculus 2
+        3,   # CS 102 Calculus 3
+        6,   # CS 111 Discrete Math
+        8,   # CS 107 Probability
+        9,   # CS 108 Statistics 1
+        10,  # DS 110 Statistics 2
+        11,  # CS 110 Intro to Computer Science
+        16,  # CS 104 Linear Algebra
+    ]
+    
+    # Add these courses to GENED as well (they're already in BSDS)
+    for course_id in bsds_gened_shared_courses:
+        hascourse.append(generate_hascourse("GENED", course_id))
+
     clusters = []
     cluster_id = 1
     cluster_descriptions = {
@@ -865,46 +944,49 @@ def generate_university_dataset(
         6: "Critical Thinking and Analysis",
         7: "Computer Science Foundations",
         8: "Mathematical Sciences",
-        9: "Technology and Society"
+        9: "Technology and Society",
     }
-    
+
     for prog_name in ["BAEC", "BAPG"]:
-        for cluster_num in range(1, 7):  
-            clusters.append(generate_cluster(
+        for cluster_num in range(1, 7):
+            clusters.append(
+                generate_cluster(
+                    cluster_id,
+                    cluster_num,
+                    prog_name,
+                    cluster_descriptions.get(cluster_num),
+                )
+            )
+            cluster_id += 1
+
+    for cluster_num in [5, 7, 8, 9]:
+        clusters.append(
+            generate_cluster(
                 cluster_id,
                 cluster_num,
-                prog_name,
-                cluster_descriptions.get(cluster_num)
-            ))
-            cluster_id += 1
-    
-    for cluster_num in [5, 7, 8, 9]:
-        clusters.append(generate_cluster(
-            cluster_id,
-            cluster_num,
-            "BSCS",
-            cluster_descriptions.get(cluster_num)
-        ))
+                "BSCS",
+                cluster_descriptions.get(cluster_num),
+            )
+        )
         cluster_id += 1
-    
+
     cluster_lookup = {}
     for cluster in clusters:
         key = (cluster["cluster_number"], cluster["prog_name"])
         cluster_lookup[key] = cluster["cluster_id"]
-    
+
     course_clusters = []
     course_name_to_id = {course["name"]: course["id"] for course in courses}
-    
+
     for course in courses:
         course_id = course["id"]
         course_name = course["name"]
-        cluster_number_str = course.get("cluster_number")
         
-        if cluster_number_str:
-            cluster_numbers = [int(n.strip()) for n in cluster_number_str.split(",")]
-            
+        # Use COURSES_WITH_CLUSTERS mapping directly instead of reading from course
+        if course_name in COURSES_WITH_CLUSTERS:
+            cluster_numbers = COURSES_WITH_CLUSTERS[course_name]
             prog_name = get_program_from_course(course_name)
-            
+
             for cluster_num in cluster_numbers:
                 cluster_id_found = None
                 for (cn, pn), cid in cluster_lookup.items():
@@ -913,25 +995,26 @@ def generate_university_dataset(
                             cluster_id_found = cid
                             break
                         elif cluster_id_found is None:
-                            cluster_id_found = cid 
-                
+                            cluster_id_found = cid
+
                 if cluster_id_found:
                     course_clusters.append(generate_course_cluster(course_id, cluster_id_found))
-    
+
     preferred = []
     for student in students:
         student_id = student["id"]
         num_preferences = random.randint(1, 3)
-        available_clusters = clusters.copy()
-        random.shuffle(available_clusters)
-        
-        for i, cluster in enumerate(available_clusters[:num_preferences]):
-            preferred.append(generate_preferred(
-                student_id,
-                cluster["cluster_id"],
-                preference_order=i + 1  
-            ))
-    
+        available_courses = courses.copy()
+        random.shuffle(available_courses)
+
+        for course in available_courses[:num_preferences]:
+            preferred.append(
+                generate_preferred(
+                    student_id,
+                    course["id"],
+                )
+            )
+
     return {
         "student": students,
         "location": locations,
@@ -956,9 +1039,9 @@ if __name__ == "__main__":
         num_students=10,
         num_locations=50,
         num_sections_per_course=1,
-        current_year=2025
+        current_year=2025,
     )
-    
+
     print(f"Generated {len(dataset['student'])} students")
     print(f"Generated {len(dataset['location'])} locations")
     print(f"Generated {len(dataset['instructor'])} instructors")
@@ -971,3 +1054,4 @@ if __name__ == "__main__":
     print(f"Generated {len(dataset['takes'])} student enrollments")
     print(f"Generated {len(dataset['works'])} instructor-department assignments")
     print(f"Generated {len(dataset['hascourse'])} program-course relationships")
+    

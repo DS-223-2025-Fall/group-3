@@ -22,12 +22,14 @@ class StudentDB(Base):
         student_id: Primary key, auto-incrementing integer
         student_name: Student's name
         credit: Number of credits the student has
+        program_name: Program name the student is enrolled in
     """
     __tablename__ = "students"
     
     student_id = Column(Integer, primary_key=True, index=True)
     student_name = Column(String, nullable=False)
     credit = Column(Integer, default=0)
+    program_name = Column(String(100), nullable=False)
 
 
 class LocationDB(Base):
@@ -62,7 +64,6 @@ class ProgramDB(Base):
     
     prog_name = Column(String, primary_key=True)
     deptID = Column(String, ForeignKey('departments.dept_name'))
-    student_id = Column(Integer, ForeignKey('students.student_id'))
 
 
 class CourseDB(Base):
@@ -71,8 +72,7 @@ class CourseDB(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    credits = Column(Integer)
-    cluster_number = Column(String, nullable=True)  
+    credits = Column(Integer)  
 
 
 class TimeSlotDB(Base):
@@ -168,11 +168,10 @@ class CourseClusterDB(Base):
 
 class PreferredDB(Base):
     """
-    Database model for Preferred table - weak entity (depends on Student and Cluster).
-    Represents student preferences for clusters.
+    Database model for Preferred table - junction table linking students to courses.
+    Represents student preferences for courses.
     """
     __tablename__ = "preferred"
     
-    student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)  # Weak entity dependency
-    cluster_id = Column(Integer, ForeignKey('clusters.cluster_id'), primary_key=True)  # Weak entity dependency
-    preference_order = Column(Integer, nullable=True)  # Optional: order of preference (1 = highest)
+    student_id = Column(Integer, ForeignKey('students.student_id'), primary_key=True)
+    course_id = Column(Integer, ForeignKey('courses.id'), primary_key=True)

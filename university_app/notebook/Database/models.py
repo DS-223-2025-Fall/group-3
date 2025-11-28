@@ -44,7 +44,6 @@ class Program(Base):
     
     prog_name = Column(String, primary_key=True)
     deptID = Column(String, ForeignKey('departments.dept_name'))
-    student_id = Column(Integer, ForeignKey('students.student_id'))
 
 
 class Course(Base):
@@ -53,7 +52,6 @@ class Course(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     credits = Column(Integer)
-    cluster_number = Column(String, nullable=True)
 
 
 class TimeSlot(Base):
