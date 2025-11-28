@@ -43,9 +43,6 @@ plugins:
         python:
           paths:
             - university_app
-          setup_commands:
-            - import sys
-            - sys.path.insert(0, "university_app")
           rendering:
             show_source: true
 

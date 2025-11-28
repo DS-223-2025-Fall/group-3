@@ -1,3 +1,8 @@
+"""
+Pydantic schema definitions for request and response validation.
+Provides data validation schemas for all API endpoints including student, course, section, and UI element models.
+"""
+
 from pydantic import BaseModel
 from typing import Optional
 
@@ -277,3 +282,44 @@ class UIElementClickCreate(BaseModel):
     element_id: Optional[str] = None  # Specific element identifier
     element_position: Optional[str] = None  # Position variant
     page_url: Optional[str] = None
+
+# RecommendationResult Schemas
+class RecommendationResult(BaseModel):
+    """Response schema for recommendation result"""
+    id: int
+    student_id: int
+    course_id: int
+    recommended_section_id: int
+    course_name: str
+    cluster: Optional[str] = None
+    credits: Optional[int] = None
+    time_slot: Optional[str] = None
+    recommendation_score: Optional[str] = None
+    why_recommended: Optional[str] = None
+    slot_number: Optional[int] = None
+    model_version: Optional[str] = None
+    time_preference: Optional[str] = None
+    semester: Optional[str] = None
+    year: Optional[int] = None
+    created_at: str
+    updated_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class RecommendationResultCreate(BaseModel):
+    """Request schema for creating a recommendation result"""
+    student_id: int
+    course_id: int
+    recommended_section_id: int
+    course_name: str
+    cluster: Optional[str] = None
+    credits: Optional[int] = None
+    time_slot: Optional[str] = None
+    recommendation_score: Optional[str] = None
+    why_recommended: Optional[str] = None
+    slot_number: Optional[int] = None
+    model_version: Optional[str] = None
+    time_preference: Optional[str] = None
+    semester: Optional[str] = None
+    year: Optional[int] = None

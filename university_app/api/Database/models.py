@@ -1,12 +1,6 @@
 """
-Database Models for the University Course Management System.
-
-This module defines the database models using SQLAlchemy for the complete university system.
-All models must be imported here so they are registered with SQLAlchemy's Base metadata
-and tables are created when the API service starts.
-
-Modules:
-    - sqlalchemy: For ORM and database schema definition.
+Database models for the University Course Management System.
+Defines all SQLAlchemy database models for the complete university system including students, courses, sections, and A/B testing tables.
 """
 
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text

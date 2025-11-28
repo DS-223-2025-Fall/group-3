@@ -1,5 +1,9 @@
 """
-Database Configuration
+Database configuration module for SQLAlchemy connection setup.
+Provides database engine, base class, and session management for the application.
+
+This module handles database connection initialization and provides a dependency
+injection function for FastAPI endpoints to access database sessions.
 """
 
 from sqlalchemy import create_engine
@@ -30,8 +34,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
     """
-    Function to get a database session.
-    Yields a database session and ensures it's closed after use.
+    Get a database session for dependency injection. Yields a database session and ensures it's closed after use.
+    
+    Input:
+        None
+    
+    Return:
+        Generator[Session]: Database session generator that yields a session.
     """
     db = SessionLocal()
     try:

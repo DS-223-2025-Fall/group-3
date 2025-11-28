@@ -1,6 +1,6 @@
 """
-Database Initialization Module
-Checks if database is empty and initializes it by running ETL if needed.
+Database initialization module for the API service.
+Checks if database is empty and initializes it by running ETL process if needed.
 """
 
 import sys
@@ -14,8 +14,13 @@ from Database.models import StudentDB, CourseDB, ProgramDB, SectionDB, Base
 
 def is_database_initialized():
     """
-    Check if database is fully initialized by checking multiple key tables.
-    Returns True if database has data, False if empty.
+    Check if database is fully initialized by checking multiple key tables for data.
+    
+    Input:
+        None
+    
+    Return:
+        bool: True if database has data, False if empty.
     """
     try:
         # Check if tables exist
@@ -55,8 +60,13 @@ def is_database_initialized():
 
 def initialize_database():
     """
-    Initialize the database by running the ETL process.
-    Always runs ETL to ensure database has fresh data.
+    Initialize the database by running the ETL process. Always runs ETL to ensure database has fresh data.
+    
+    Input:
+        None
+    
+    Return:
+        bool: True if initialization successful, False otherwise.
     """
     try:
         # Find the ETL directory (mounted at /etl)
@@ -134,8 +144,13 @@ def initialize_database():
 
 def ensure_database_initialized():
     """
-    Main function to ensure database is initialized.
-    Always runs ETL to ensure database has data (will handle existing data gracefully).
+    Main function to ensure database is initialized. Always runs ETL to ensure database has data (will handle existing data gracefully).
+    
+    Input:
+        None
+    
+    Return:
+        bool: True if initialization successful, False otherwise.
     """
     logger.info("Ensuring database is initialized...")
     

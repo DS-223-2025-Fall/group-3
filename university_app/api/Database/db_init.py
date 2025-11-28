@@ -1,23 +1,6 @@
 """
-Database Initialization and Health Check Utilities.
-
-This module provides functions for:
-1. Database connection health checks
-2. Database schema initialization
-3. Database seeding (optional)
-
-Usage:
-    from Database.db_init import check_db_connection, init_database, seed_database
-    
-    # Check if database is accessible
-    if check_db_connection():
-        print("Database is ready!")
-    
-    # Initialize database (create tables)
-    init_database()
-    
-    # Seed database with initial data (optional)
-    seed_database()
+Database initialization and health check utilities.
+Provides functions for database connection health checks, schema initialization, and optional database seeding.
 """
 
 from sqlalchemy import text
@@ -31,16 +14,13 @@ import sys
 
 def check_db_connection() -> bool:
     """
-    Check if the database connection is healthy.
+    Check if the database connection is healthy and accessible.
     
-    Returns:
-        True if connection is successful, False otherwise
+    Input:
+        None
     
-    Example:
-        if check_db_connection():
-            print("Database is ready!")
-        else:
-            print("Database connection failed!")
+    Return:
+        bool: True if connection is successful, False otherwise.
     """
     try:
         with engine.connect() as connection:
@@ -58,15 +38,13 @@ def check_db_connection() -> bool:
 
 def init_database() -> bool:
     """
-    Initialize the database by creating all tables.
-    This is safe to run multiple times (won't recreate existing tables).
+    Initialize the database by creating all tables. Safe to run multiple times (won't recreate existing tables).
     
-    Returns:
-        True if initialization successful, False otherwise
+    Input:
+        None
     
-    Example:
-        if init_database():
-            print("Database tables created successfully!")
+    Return:
+        bool: True if initialization successful, False otherwise.
     """
     try:
         # Create all tables defined in models
@@ -83,18 +61,16 @@ def init_database() -> bool:
 
 def drop_all_tables() -> bool:
     """
-    Drop all database tables. USE WITH CAUTION!
-    This will delete all data in the database.
+    Drop all database tables. USE WITH CAUTION! This will delete all data in the database.
     
-    Returns:
-        True if successful, False otherwise
+    Input:
+        None
+    
+    Return:
+        bool: True if successful, False otherwise.
     
     Warning:
         This will permanently delete all data!
-    
-    Example:
-        if drop_all_tables():
-            print("All tables dropped!")
     """
     try:
         Base.metadata.drop_all(bind=engine)
@@ -107,15 +83,13 @@ def drop_all_tables() -> bool:
 
 def reset_database() -> bool:
     """
-    Reset the database by dropping all tables and recreating them.
-    USE WITH CAUTION - This will delete all data!
+    Reset the database by dropping all tables and recreating them. USE WITH CAUTION - This will delete all data!
     
-    Returns:
-        True if successful, False otherwise
+    Input:
+        None
     
-    Example:
-        if reset_database():
-            print("Database reset complete!")
+    Return:
+        bool: True if successful, False otherwise.
     """
     logger.warning("Resetting database - all data will be lost!")
     if drop_all_tables() and init_database():
@@ -128,15 +102,13 @@ def reset_database() -> bool:
 
 def get_database_info() -> dict:
     """
-    Get information about the database connection and schema.
+    Get information about the database connection and schema including database name and table list.
     
-    Returns:
-        Dictionary with database information
+    Input:
+        None
     
-    Example:
-        info = get_database_info()
-        print(f"Database: {info['database_name']}")
-        print(f"Tables: {info['tables']}")
+    Return:
+        dict: Dictionary with database information including database_name, tables, table_count, and connection_status.
     """
     try:
         with engine.connect() as connection:
@@ -171,21 +143,13 @@ def get_database_info() -> dict:
 
 def seed_database(sample_data: bool = False) -> bool:
     """
-    Seed the database with initial/sample data.
+    Seed the database with initial or sample data. This is a placeholder function that can be implemented based on specific needs.
     
-    Args:
-        sample_data: If True, add sample data for testing
+    Input:
+        sample_data (bool): If True, add sample data for testing, default False.
     
-    Returns:
-        True if seeding successful, False otherwise
-    
-    Note:
-        This is a placeholder - implement based on your needs.
-        You can import from ETL or create sample data here.
-    
-    Example:
-        if seed_database(sample_data=True):
-            print("Database seeded with sample data!")
+    Return:
+        bool: True if seeding successful, False otherwise.
     """
     try:
         db = SessionLocal()
