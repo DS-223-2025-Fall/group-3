@@ -45,79 +45,74 @@ TABLE_MODELS = {
 
 # Order matters for foreign key dependencies
 LOAD_ORDER = [
-    "location",      # No dependencies
-    "student",       # No dependencies
-    "instructor",    # Depends on location
-    "department",    # Depends on location
-    "program",       # Depends on department, student
-    "course",        # No dependencies
-    "time_slot",     # No dependencies
-    "section",       # Depends on location, time_slot, course, instructor
-    "prerequisites", # Depends on course
-    "takes",         # Depends on student, section
-    "works",         # Depends on instructor, department
-    "hascourse",     # Depends on program, course
-    "cluster",       # Depends on program
+    "location",       # No dependencies
+    "student",        # No dependencies
+    "instructor",     # Depends on location
+    "department",     # Depends on location
+    "program",        # Depends on department, student
+    "course",         # No dependencies
+    "time_slot",      # No dependencies
+    "section",        # Depends on location, time_slot, course, instructor
+    "prerequisites",  # Depends on course
+    "takes",          # Depends on student, section
+    "works",          # Depends on instructor, department
+    "hascourse",      # Depends on program, course
+    "cluster",        # Depends on program
     "course_cluster", # Depends on course, cluster
-    "preferred",     # Depends on student, cluster
+    "preferred",      # Depends on student, cluster
 ]
 
 
 def load_csv_to_db(csv_path: str, model_class, db_session):
     """
-    Load a CSV file into the database using the specified model.
-    
-    Args:
-        csv_path: Path to the CSV file
-        model_class: SQLAlchemy model class
-        db_session: Database session
+    Description: Load a single CSV file into the corresponding database table using the given model.
+    inputs: csv_path (str), model_class (SQLAlchemy model), db_session (SQLAlchemy Session).
+    return: Number of records inserted into the table (int).
     """
     if not os.path.exists(csv_path):
         logger.warning(f"CSV file not found: {csv_path}, skipping...")
         return 0
-    
+
     df = pd.read_csv(csv_path)
     if df.empty:
         logger.warning(f"CSV file is empty: {csv_path}, skipping...")
         return 0
-    
+
     # Column name mapping: CSV file name -> CSV column -> Model field
-    # Handle cases where CSV uses different names than models
-    # Get the CSV file name (without .csv extension) to determine mapping
-    csv_filename = os.path.basename(csv_path).replace('.csv', '')
-    
+    csv_filename = os.path.basename(csv_path).replace(".csv", "")
+
     column_mapping = {
-        'student': {'id': 'student_id', 'name': 'student_name'},  # CSV: id,name -> Model: student_id,student_name
-        'program': {'dept_name': 'deptID'},  # CSV: dept_name -> Model: deptID
-        # Add other mappings as needed
+        "student": {"id": "student_id", "name": "student_name"},
+        "program": {"dept_name": "deptID"},
     }
-    
+
     mapping = column_mapping.get(csv_filename, {})
-    
+
     # Rename columns if mapping exists
     if mapping:
         df = df.rename(columns=mapping)
-    
+
     # Special handling for programs - deduplicate by prog_name (primary key)
-    if csv_filename == 'program':
-        df = df.drop_duplicates(subset=['prog_name'], keep='first')
+    if csv_filename == "program":
+        df = df.drop_duplicates(subset=["prog_name"], keep="first")
         logger.info(f"Deduplicated programs: {len(df)} unique programs")
-    
+
     # Special handling for hascourse - deduplicate by (prog_name, courseid) composite key
-    if csv_filename == 'hascourse':
+    if csv_filename == "hascourse":
         original_count = len(df)
-        df = df.drop_duplicates(subset=['prog_name', 'courseid'], keep='first')
+        df = df.drop_duplicates(subset=["prog_name", "courseid"], keep="first")
         if len(df) < original_count:
-            logger.info(f"Deduplicated hascourse: {len(df)} unique records (removed {original_count - len(df)} duplicates)")
-    
+            logger.info(
+                f"Deduplicated hascourse: {len(df)} unique records "
+                f"(removed {original_count - len(df)} duplicates)"
+            )
+
     # Convert DataFrame rows to model instances
     records = []
     for _, row in df.iterrows():
-        # Convert row to dictionary, handling NaN values
         record_dict = row.to_dict()
-        # Remove NaN values (convert to None for nullable fields)
         record_dict = {k: (None if pd.isna(v) else v) for k, v in record_dict.items()}
-        
+
         try:
             record = model_class(**record_dict)
             records.append(record)
@@ -125,59 +120,69 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
             logger.error(f"Error creating {model_class.__name__} from row: {record_dict}")
             logger.error(f"Error: {e}")
             raise
-    
+
     # Bulk insert with conflict handling
     try:
-        # Check if table already has data - if so, skip duplicates
         existing_count = db_session.query(model_class).count()
         if existing_count > 0:
-            logger.warning(f"Table {model_class.__tablename__} already has {existing_count} records. Skipping to avoid duplicates.")
+            logger.warning(
+                f"Table {model_class.__tablename__} already has {existing_count} records. "
+                f"Skipping to avoid duplicates."
+            )
             return 0
-        
+
         db_session.bulk_save_objects(records)
         db_session.commit()
-        logger.info(f"Loaded {len(records)} records from {csv_path} into {model_class.__tablename__}")
+        logger.info(
+            f"Loaded {len(records)} records from {csv_path} into {model_class.__tablename__}"
+        )
         return len(records)
     except Exception as e:
         db_session.rollback()
-        # If it's a duplicate key error, table might have partial data - try to continue
         if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
-            logger.warning(f"Duplicate records detected in {model_class.__tablename__}. Table may already have data. Skipping...")
+            logger.warning(
+                f"Duplicate records detected in {model_class.__tablename__}. "
+                f"Table may already have data. Skipping..."
+            )
             return 0
         logger.error(f"Error loading {csv_path} into database: {e}")
         raise
 
 
 def main():
-    """Main function to load all CSV files into the database."""
+    """
+    Description: Create tables if needed and load all CSVs into the database in dependency order.
+    inputs: None; uses global LOAD_ORDER and TABLE_MODELS.
+    return: None.
+    """
     logger.info("Starting CSV to database load process...")
-    
+
     # Create tables if they don't exist
     logger.info("Creating database tables...")
     create_tables()
     logger.info("Database tables created/verified.")
-    
+
     # Get database session
     db_gen = get_db()
     db = next(db_gen)
-    
+
     try:
         data_dir = "data"
         total_records = 0
-        
+
         # Load tables in dependency order
         for table_name in LOAD_ORDER:
             csv_path = os.path.join(data_dir, f"{table_name}.csv")
             model_class = TABLE_MODELS[table_name]
-            
+
             logger.info(f"Loading {table_name}...")
             count = load_csv_to_db(csv_path, model_class, db)
             total_records += count
-        
-        logger.info(f"\n{'='*60}")
+
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"SUCCESS: Loaded {total_records} total records into database")
-        logger.info(f"{'='*60}")
-        
+        logger.info(f"{'=' * 60}")
+
     except Exception as e:
         logger.error(f"Error during data loading: {e}")
         raise
@@ -187,4 +192,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
