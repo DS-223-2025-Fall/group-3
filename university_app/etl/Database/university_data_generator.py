@@ -88,6 +88,10 @@ PROGRAMS = [
     "BSE",   # Bachelor of Science in Economics
 ]
 
+# Foundation and General Education programs for courses available to all programs
+FND_PROGRAM = "FND"      # Foundation program (FND prefix courses)
+GENED_PROGRAM = "GENED"  # General Education program (CHSS, CSE courses)
+
 # Department names
 DEPARTMENTS = [
     "Manoogian Simone College of Business and Economics",
@@ -227,16 +231,19 @@ def get_program_from_course(course_name):
     return "BAB"
 
 
-def generate_student(student_id):
+def generate_student(student_id, program_name=None):
     """
-    Description: Generate a student record with a random name and credits.
-    inputs: student_id (int) – sequential student identifier.
-    return: Dict with keys 'id', 'name', and 'credit'.
+    Description: Generate a student record with a random name, credits, and program name.
+    inputs: student_id (int) – sequential student identifier, program_name (str) – program name.
+    return: Dict with keys 'id', 'name', 'credit', and 'program_name'.
     """
+    if program_name is None:
+        program_name = "BSDS"  # For MVP product, lets assume all students are in BSDS program
     return {
         "id": student_id,
         "name": fake.name(),
         "credit": random.randint(0, 100),
+        "program_name": program_name,
     }
 
 
@@ -366,24 +373,23 @@ def generate_department(dept_name, room_id):
     }
 
 
-def generate_program(prog_name, dept_name, student_id):
+def generate_program(prog_name, dept_name):
     """
-    Description: Generate a program record linking a student to a department program.
-    inputs: prog_name (str), dept_name (str), student_id (int).
-    return: Dict with 'prog_name', 'dept_name', and 'student_id'.
+    Description: Generate a program record for a department program.
+    inputs: prog_name (str), dept_name (str).
+    return: Dict with 'prog_name' and 'dept_name'.
     """
     return {
         "prog_name": prog_name,
         "dept_name": dept_name,
-        "student_id": student_id,
     }
 
 
 def generate_course(course_id, course_name):
     """
-    Description: Generate a course record with credits and optional cluster_number string.
+    Description: Generate a course record with credits.
     inputs: course_id (int), course_name (str).
-    return: Dict with 'id', 'name', 'credits', and 'cluster_number'.
+    return: Dict with 'id', 'name', and 'credits'.
     """
     if (
         "Seminar" in course_name
@@ -395,17 +401,10 @@ def generate_course(course_id, course_name):
     else:
         credits = random.choice([3, 4])
 
-    if course_name in COURSES_WITH_CLUSTERS:
-        cluster_numbers = COURSES_WITH_CLUSTERS[course_name]
-        cluster_number = ",".join(map(str, sorted(cluster_numbers)))
-    else:
-        cluster_number = None
-
     return {
         "id": course_id,
         "name": course_name,
         "credits": credits,
-        "cluster_number": cluster_number,
     }
 
 
@@ -522,16 +521,15 @@ def generate_course_cluster(course_id, cluster_id):
     }
 
 
-def generate_preferred(student_id, cluster_id, preference_order=None):
+def generate_preferred(student_id, course_id):
     """
-    Description: Generate a preferred record expressing a student's cluster preference.
-    inputs: student_id (int), cluster_id (int), preference_order (int or None).
-    return: Dict with 'student_id', 'cluster_id', and 'preference_order'.
+    Description: Generate a preferred record expressing a student's course preference.
+    inputs: student_id (int), course_id (int).
+    return: Dict with 'student_id' and 'course_id'.
     """
     return {
         "student_id": student_id,
-        "cluster_id": cluster_id,
-        "preference_order": preference_order,
+        "course_id": course_id,
     }
 
 
@@ -785,9 +783,8 @@ def generate_university_dataset(
     inputs: num_students (int), num_locations (int), num_sections_per_course (int), current_year (int).
     return: Dict mapping table names (str) to lists of row dicts (students, courses, sections, etc.).
     """
-    students = [generate_student(i) for i in range(1, num_students + 1)]
-
-    room_ids = random.sample(range(100, 401), min(num_locations, 301))
+    # Generate sequential room_ids starting from 1
+    room_ids = list(range(1, num_locations + 1))
     locations = [generate_location(room_id) for room_id in room_ids]
 
     instructors = generate_fixed_instructors(locations)
@@ -820,22 +817,27 @@ def generate_university_dataset(
         "BSN": "Turpanjian College of Health Sciences",
         "BSESS": "Akian College of Science and Engineering",
         "BSE": "Manoogian Simone College of Business and Economics",
+        "FND": "College of Humanities and Social Sciences",    # Foundation program
+        "GENED": "College of Humanities and Social Sciences",  # General Education program
     }
 
-    student_program_assigned = set()
-    student_id = 1
-    for prog_name in PROGRAMS:
-        dept_name = program_to_dept[prog_name]
-        programs.append(generate_program(prog_name, dept_name, student_id))
-        student_program_assigned.add(student_id)
-        student_id = (student_id % num_students) + 1
-
-    unassigned_students = set(range(1, num_students + 1)) - student_program_assigned
-    if unassigned_students:
-        for student_id in unassigned_students:
-            prog_name = random.choice(PROGRAMS)
-            dept_name = program_to_dept[prog_name]
-            programs.append(generate_program(prog_name, dept_name, student_id))
+    # All students are assigned to BSDS program
+    student_program_map = {}
+    bsds_dept_name = program_to_dept["BSDS"]
+    fnd_dept_name = program_to_dept["FND"]
+    gened_dept_name = program_to_dept["GENED"]
+    
+    # Create program entries for BSDS, FND, and GENED
+    programs.append(generate_program("BSDS", bsds_dept_name))
+    programs.append(generate_program("FND", fnd_dept_name))
+    programs.append(generate_program("GENED", gened_dept_name))
+    
+    # Assign all students to BSDS
+    for student_id in range(1, num_students + 1):
+        student_program_map[student_id] = "BSDS"
+    
+    # Generate students with their program names (all BSDS)
+    students = [generate_student(i, "BSDS") for i in range(1, num_students + 1)]
 
     sections = []
     section_id = 1
@@ -897,15 +899,39 @@ def generate_university_dataset(
         works.append(generate_works(dept_name, instructor_id))
 
     hascourse = []
-    for program in programs:
-        prog_name = program["prog_name"]
-        num_courses_in_program = random.randint(10, 20)
-        program_courses = random.sample(
-            range(1, len(courses) + 1),
-            min(num_courses_in_program, len(courses)),
-        )
-        for course_id in program_courses:
-            hascourse.append(generate_hascourse(prog_name, course_id))
+    # For BSDS program: assign first 27 courses (BSDS courses)
+    bsds_course_ids = list(range(1, 28))  # Courses 1-27 are BSDS courses
+    for course_id in bsds_course_ids:
+        hascourse.append(generate_hascourse("BSDS", course_id))
+    
+    # For FND program: assign FND courses (28-36) - Foundation courses
+    fnd_course_ids = list(range(28, 37))  # Courses 28-36 are FND courses
+    for course_id in fnd_course_ids:
+        hascourse.append(generate_hascourse("FND", course_id))
+    
+    # For GENED program: assign remaining courses (37-51) - General Education (CHSS, CSE)
+    gened_course_ids = list(range(37, len(courses) + 1))  # Courses 37-51
+    for course_id in gened_course_ids:
+        hascourse.append(generate_hascourse("GENED", course_id))
+    
+    # Some courses belong to both BSDS and GENED (cross-listed courses)
+    # These are typically foundational courses that count toward both major and general education
+    # Examples: Calculus, Statistics, Linear Algebra, Intro CS, Discrete Math
+    bsds_gened_shared_courses = [
+        1,   # CS 100 Calculus 1
+        2,   # CS 101 Calculus 2
+        3,   # CS 102 Calculus 3
+        6,   # CS 111 Discrete Math
+        8,   # CS 107 Probability
+        9,   # CS 108 Statistics 1
+        10,  # DS 110 Statistics 2
+        11,  # CS 110 Intro to Computer Science
+        16,  # CS 104 Linear Algebra
+    ]
+    
+    # Add these courses to GENED as well (they're already in BSDS)
+    for course_id in bsds_gened_shared_courses:
+        hascourse.append(generate_hascourse("GENED", course_id))
 
     clusters = []
     cluster_id = 1
@@ -955,11 +981,10 @@ def generate_university_dataset(
     for course in courses:
         course_id = course["id"]
         course_name = course["name"]
-        cluster_number_str = course.get("cluster_number")
-
-        if cluster_number_str:
-            cluster_numbers = [int(n.strip()) for n in cluster_number_str.split(",")]
-
+        
+        # Use COURSES_WITH_CLUSTERS mapping directly instead of reading from course
+        if course_name in COURSES_WITH_CLUSTERS:
+            cluster_numbers = COURSES_WITH_CLUSTERS[course_name]
             prog_name = get_program_from_course(course_name)
 
             for cluster_num in cluster_numbers:
@@ -979,15 +1004,14 @@ def generate_university_dataset(
     for student in students:
         student_id = student["id"]
         num_preferences = random.randint(1, 3)
-        available_clusters = clusters.copy()
-        random.shuffle(available_clusters)
+        available_courses = courses.copy()
+        random.shuffle(available_courses)
 
-        for i, cluster in enumerate(available_clusters[:num_preferences]):
+        for course in available_courses[:num_preferences]:
             preferred.append(
                 generate_preferred(
                     student_id,
-                    cluster["cluster_id"],
-                    preference_order=i + 1,
+                    course["id"],
                 )
             )
 

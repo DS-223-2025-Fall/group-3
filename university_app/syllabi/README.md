@@ -1,11 +1,13 @@
 # Syllabi Directory
 
-This directory must contain course syllabus PDF files that are served by the API.
-If you dont see it, please ask group-3 member to send them.
+This directory must contain a zip file (`syllabi.zip`) with all course syllabus PDF files.
+The zip file will be automatically extracted when the API container starts via Docker Compose.
+
+If you don't see the zip file, please ask a group-3 member to send it.
 
 ## File Naming Convention
 
-Syllabi files must follow this naming pattern:
+Syllabi files inside the zip must follow this naming pattern:
 ```
 course_{course_id}_section_{section_id}.pdf
 ```
@@ -20,16 +22,34 @@ Where:
 
 ## How It Works
 
-1. **Docker Volume Mount**: The `syllabi/` directory is mounted into the API container at `/api/syllabi/`
-2. **API Endpoint**: Files are served at `http://localhost:8008/syllabi/{filename}`
-3. **Database Reference**: The `sections` table stores the `syllabus_url` path (e.g., `/syllabi/course_1_section_1.pdf`)
+1. **Docker Volume Mount**: The `syllabi.zip` file is mounted into the API container at `/api/syllabi.zip`
+2. **Automatic Extraction**: On container startup, the entrypoint script automatically unzips the file to `/api/syllabi/`
+3. **API Endpoint**: Files are served at `http://localhost:8008/syllabi/{filename}`
+4. **Database Reference**: The `sections` table stores the `syllabus_url` path (e.g., `/syllabi/course_1_section_1.pdf`)
 
-## Adding Syllabi
+## Adding/Updating Syllabi
 
-1. Place PDF files in this directory (`university_app/syllabi/`)
-2. Name them according to the convention: `course_{course_id}_section_1.pdf`
-3. Restart the API container if needed: `docker-compose restart api`
-4. Access via: `http://localhost:8008/syllabi/course_{course_id}_section_1.pdf`
+1. Create a zip file named `syllabi.zip` containing all PDF files
+2. Place the zip file in this directory (`university_app/syllabi/syllabi.zip`)
+3. Ensure PDF files inside the zip follow the naming convention: `course_{course_id}_section_1.pdf`
+4. Restart the API container: `docker-compose restart api` (or rebuild: `docker-compose up -d --build api`)
+5. The zip file will be automatically extracted on container startup
+6. Access via: `http://localhost:8008/syllabi/course_{course_id}_section_1.pdf`
+
+## Creating the Zip File
+
+To create the zip file from individual PDF files:
+```bash
+cd university_app/syllabi
+zip syllabi.zip course_*.pdf
+```
+
+Or from a directory containing the PDFs:
+```bash
+cd /path/to/syllabi/pdfs
+zip -r syllabi.zip *.pdf
+mv syllabi.zip /path/to/university_app/syllabi/
+```
 
 ## Course ID Reference
 
@@ -42,7 +62,9 @@ Or check the generated CSV file: `etl/data/course.csv`
 
 ## Notes
 
-- This directory is **excluded from git** (see `.gitignore`) to avoid committing large PDF files
+- The zip file (`syllabi.zip`) is **excluded from git** (see `.gitignore`) to avoid committing large files
+- The zip file is mounted as read-only (`:ro`) in docker-compose for safety
+- The extraction happens automatically on every container startup
 - For sharing with instructors/PM, use alternative methods (see project documentation)
 - The API will return 404 if a syllabus file is missing (this is expected for MVP)
 

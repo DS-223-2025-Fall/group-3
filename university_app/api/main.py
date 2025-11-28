@@ -84,7 +84,8 @@ async def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     """
     db_student = StudentDB(
         student_name=student.student_name,
-        credit=student.credit
+        credit=student.credit,
+        program_name=student.program_name
     )
     db.add(db_student)
     db.commit()

@@ -9,6 +9,7 @@ class Student(BaseModel):
     student_id: int
     student_name: str
     credit: int
+    program_name: str
 
     class Config:
         from_attributes = True
@@ -17,6 +18,7 @@ class StudentCreate(BaseModel):
     """Request schema for creating a student"""
     student_name: str
     credit: int = 0
+    program_name: str
 
 # Location Schemas
 class Location(BaseModel):
@@ -67,7 +69,6 @@ class Program(BaseModel):
     """Response schema for program"""
     prog_name: str
     deptID: Optional[str] = None
-    student_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -76,7 +77,6 @@ class ProgramCreate(BaseModel):
     """Request schema for creating a program"""
     prog_name: str
     deptID: Optional[str] = None
-    student_id: Optional[int] = None
 
 # Course Schemas
 class Course(BaseModel):
@@ -84,7 +84,6 @@ class Course(BaseModel):
     id: int
     name: Optional[str] = None
     credits: Optional[int] = None
-    cluster_number: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -93,7 +92,6 @@ class CourseCreate(BaseModel):
     """Request schema for creating a course"""
     name: Optional[str] = None
     credits: Optional[int] = None
-    cluster_number: Optional[str] = None
 
 # TimeSlot Schemas
 class TimeSlot(BaseModel):
@@ -234,8 +232,7 @@ class CourseClusterCreate(BaseModel):
 class Preferred(BaseModel):
     """Response schema for preferred"""
     student_id: int
-    cluster_id: int
-    preference_order: Optional[int] = None
+    course_id: int
 
     class Config:
         from_attributes = True
@@ -243,5 +240,4 @@ class Preferred(BaseModel):
 class PreferredCreate(BaseModel):
     """Request schema for creating a preferred record"""
     student_id: int
-    cluster_id: int
-    preference_order: Optional[int] = None
+    course_id: int

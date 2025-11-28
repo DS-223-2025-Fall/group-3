@@ -23,4 +23,5 @@ RUN chmod +x run_etl.sh
 EXPOSE 3000
 
 # Command to run the complete ETL process (generate data + create tables + load data)
-CMD ["./run_etl.sh"]
+# Use bash explicitly to avoid permission issues with volume mounts
+CMD ["bash", "run_etl.sh"]

@@ -98,6 +98,7 @@ def main():
         print(f"ID: {sample_student['id']}")
         print(f"Name: {sample_student['name']}")
         print(f"Credits: {sample_student['credit']}")
+        print(f"Program Name: {sample_student['program_name']}")
 
     if len(dataset["course"]) > 0:
         print("\n--- Sample Course ---")
@@ -105,7 +106,6 @@ def main():
         print(f"ID: {sample_course['id']}")
         print(f"Name: {sample_course['name']}")
         print(f"Credits: {sample_course['credits']}")
-        print(f"Cluster Number: {sample_course['cluster_number']}")
 
     if len(dataset["instructor"]) > 0:
         print("\n--- Sample Instructor ---")

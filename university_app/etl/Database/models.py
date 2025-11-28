@@ -10,9 +10,10 @@ class Student(Base):
     """Description: Represents a student and their core attributes in the university system."""
     __tablename__ = "students"
 
-    student_id = Column(Integer, primary_key=True)  # Matches API schema
-    student_name = Column(String)  # Matches API schema
+    student_id = Column(Integer, primary_key=True)
+    student_name = Column(String)
     credit = Column(Integer)
+    program_name = Column(String(100), nullable=False)
 
 
 class Location(Base):
@@ -47,19 +48,15 @@ class Program(Base):
 
     prog_name = Column(String, primary_key=True)
     deptID = Column(String, ForeignKey("departments.dept_name"))  # Matches CSV field name
-    student_id = Column(Integer, ForeignKey("students.student_id"))  # Fixed to match actual schema
 
 
 class Course(Base):
-    """Description: Represents a course with its credits and optional cluster assignment."""
+    """Description: Represents a course with its credits."""
     __tablename__ = "courses"
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
     credits = Column(Integer)
-    cluster_number = Column(
-        String, nullable=True
-    )  # Comma-separated string for multiple clusters (e.g., "1,2,3,4,6")
 
 
 class TimeSlot(Base):
@@ -144,16 +141,15 @@ class CourseCluster(Base):
 
 
 class Preferred(Base):
-    """Description: Represents a student's preferred clusters and their preference order."""
+    """Description: Represents a student's preferred courses."""
     __tablename__ = "preferred"
 
     student_id = Column(
         Integer, ForeignKey("students.student_id"), primary_key=True
-    )  # Weak entity dependency
-    cluster_id = Column(
-        Integer, ForeignKey("clusters.cluster_id"), primary_key=True
-    )  # Weak entity dependency
-    preference_order = Column(Integer, nullable=True)  # Optional: order of preference (1 = highest)
+    )
+    course_id = Column(
+        Integer, ForeignKey("courses.id"), primary_key=True
+    )
 
 
 def create_tables():
