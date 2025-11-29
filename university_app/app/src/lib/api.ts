@@ -14,27 +14,12 @@ export interface Course {
   location: string
   duration: string
   syllabusUrl?: string
+  credits: number
 }
 
-export interface UIElementPosition {
-  student_id: number
-  test_group: string
-  ui_config: {
-    search_bar: string
-    dropdowns: string
-    buttons: string
-    header_color: string
-    search_button_position: string
-  }
-  assigned_at: string
-}
-
-export interface UIElementClick {
-  student_id: number
-  element_type: string
-  element_id?: string
-  element_position?: string
-  page_url?: string
+export interface Prerequisite {
+  course_id: number
+  prerequisite_id: number
 }
 
 export async function fetchCourses(params?: {
@@ -58,51 +43,22 @@ export async function fetchCourses(params?: {
     return data
   } catch (error) {
     console.error('Error fetching courses:', error)
-    // Return mock data as fallback
+    // Return empty array - no mock data fallback, use real DB only
     return []
   }
 }
 
-export async function getUIPositions(studentId: number): Promise<UIElementPosition> {
+export async function fetchPrerequisites(courseId: number): Promise<Prerequisite[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/ui/positions/${studentId}`)
+    const response = await fetch(`${API_BASE_URL}/prerequisites?course_id=${courseId}`)
     if (!response.ok) {
-      throw new Error('Failed to fetch UI positions')
+      throw new Error('Failed to fetch prerequisites')
     }
-    return await response.json()
+    const data = await response.json()
+    return data
   } catch (error) {
-    console.error('Error fetching UI positions:', error)
-    // Return default configuration
-    return {
-      student_id: studentId,
-      test_group: 'A',
-      ui_config: {
-        search_bar: 'top',
-        dropdowns: 'left',
-        buttons: 'right',
-        header_color: '#1e3a5f',
-        search_button_position: 'inline'
-      },
-      assigned_at: new Date().toISOString()
-    }
-  }
-}
-
-export async function trackUIClick(click: UIElementClick): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/ui/clicks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(click),
-    })
-    if (!response.ok) {
-      throw new Error('Failed to track click')
-    }
-  } catch (error) {
-    console.error('Error tracking click:', error)
-    // Don't throw - we don't want click tracking to break the app
+    console.error('Error fetching prerequisites:', error)
+    return []
   }
 }
 

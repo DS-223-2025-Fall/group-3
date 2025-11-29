@@ -8,8 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
-import { UIElementPosition } from '@/lib/api'
-import { trackUIClick } from '@/lib/api'
 
 interface SearchFiltersProps {
   year: string
@@ -22,8 +20,8 @@ interface SearchFiltersProps {
   onSearchTextChange: (text: string) => void
   onSearch: () => void
   onDraftSchedule: () => void
-  uiConfig?: UIElementPosition | null
-  studentId: number
+  onSavedSchedules?: () => void
+  isAuthenticated?: boolean
 }
 
 export default function SearchFilters({
@@ -37,94 +35,37 @@ export default function SearchFilters({
   onSearchTextChange,
   onSearch,
   onDraftSchedule,
-  uiConfig,
-  studentId,
+  onSavedSchedules,
+  isAuthenticated = false,
 }: SearchFiltersProps) {
-  const searchBarPosition = uiConfig?.ui_config.search_bar || 'top'
-  const dropdownsPosition = uiConfig?.ui_config.dropdowns || 'left'
-  const buttonsPosition = uiConfig?.ui_config.buttons || 'right'
-  const searchButtonPosition = uiConfig?.ui_config.search_button_position || 'inline'
-
-  const handleDropdownClick = (elementId: string) => {
-    if (uiConfig) {
-      trackUIClick({
-        student_id: studentId,
-        element_type: 'dropdown',
-        element_id: elementId,
-        element_position: dropdownsPosition,
-        page_url: window.location.href
-      })
-    }
-  }
-
-  const handleDraftScheduleClick = () => {
-    if (uiConfig) {
-      trackUIClick({
-        student_id: studentId,
-        element_type: 'button',
-        element_id: 'draft_schedule_button',
-        element_position: buttonsPosition,
-        page_url: window.location.href
-      })
-    }
-    onDraftSchedule()
-  }
-
-  // Determine layout based on UI config
-  const searchBarOrder = searchBarPosition === 'top' ? 'order-1' : 'order-3'
-  const dropdownsOrder = dropdownsPosition === 'left' ? 'order-2' : 'order-4'
-  const buttonsOrder = buttonsPosition === 'left' ? 'order-1' : 'order-3'
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="space-y-4">
-        <div className={searchBarOrder}>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Search by Course Name
-          </label>
-          <div className={searchButtonPosition === 'inline' ? 'flex gap-2' : ''}>
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="flex-1 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search by Course Name
+            </label>
             <Input
               type="text"
               placeholder="Type course name or code..."
               value={searchText}
               onChange={(e) => onSearchTextChange(e.target.value)}
               className="w-full"
-              onFocus={() => {
-                if (uiConfig) {
-                  trackUIClick({
-                    student_id: studentId,
-                    element_type: 'search_bar',
-                    element_id: 'search_input',
-                    element_position: searchBarPosition,
-                    page_url: window.location.href
-                  })
-                }
-              }}
             />
-            {searchButtonPosition === 'inline' && (
-              <Button onClick={onSearch} className="bg-[#1e3a5f] hover:bg-[#2a4f7a]">
-                <Search className="h-4 w-4" />
-              </Button>
-            )}
           </div>
-        </div>
         
-        <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${dropdownsOrder}`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Year
             </label>
-            <Select 
-              value={year} 
-              onValueChange={(value) => {
-                handleDropdownClick('year_dropdown')
-                onYearChange(value)
-              }}
-            >
+            <Select value={year} onValueChange={onYearChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="All">All Years</SelectItem>
                 <SelectItem value="2022">2022</SelectItem>
                 <SelectItem value="2023">2023</SelectItem>
                 <SelectItem value="2024">2024</SelectItem>
@@ -137,17 +78,12 @@ export default function SearchFilters({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Semester
             </label>
-            <Select 
-              value={semester} 
-              onValueChange={(value) => {
-                handleDropdownClick('semester_dropdown')
-                onSemesterChange(value)
-              }}
-            >
+            <Select value={semester} onValueChange={onSemesterChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="All">All Semesters</SelectItem>
                 <SelectItem value="Fall">Fall</SelectItem>
                 <SelectItem value="Spring">Spring</SelectItem>
                 <SelectItem value="Summer">Summer</SelectItem>
@@ -159,13 +95,7 @@ export default function SearchFilters({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Course Type
             </label>
-            <Select 
-              value={courseType} 
-              onValueChange={(value) => {
-                handleDropdownClick('course_type_dropdown')
-                onCourseTypeChange(value)
-              }}
-            >
+            <Select value={courseType} onValueChange={onCourseTypeChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -178,17 +108,31 @@ export default function SearchFilters({
             </Select>
           </div>
         </div>
-        
-        <div className={`flex gap-4 ${buttonsOrder === 'order-1' ? 'justify-start' : 'justify-end'}`}>
-          {searchButtonPosition === 'separate' && (
-            <Button onClick={onSearch} className="bg-[#1e3a5f] hover:bg-[#2a4f7a]">
-              <Search className="mr-2 h-4 w-4" />
-              Search
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleDraftScheduleClick}>
+        </div>
+        <div className="flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:gap-4 md:items-end md:justify-end">
+          <Button
+            onClick={onSearch}
+            className="bg-[#1e3a5f] hover:bg-[#FFCC00] hover:text-[#1e3a5f] sm:w-auto"
+          >
+            <Search className="mr-2 h-4 w-4" />
+            Search
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onDraftSchedule}
+            className="sm:w-auto bg-[#1e3a5f] text-white hover:bg-[#FFCC00] hover:text-[#1e3a5f] border-0"
+          >
             Draft a Schedule
           </Button>
+          {isAuthenticated && onSavedSchedules && (
+            <Button
+              variant="outline"
+              onClick={onSavedSchedules}
+              className="sm:w-auto bg-[#1e3a5f] text-white hover:bg-[#FFCC00] hover:text-[#1e3a5f] border-0"
+            >
+              Saved Schedules
+            </Button>
+          )}
         </div>
       </div>
     </div>

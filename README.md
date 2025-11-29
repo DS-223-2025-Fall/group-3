@@ -5,6 +5,7 @@ A full-stack application for managing university courses, students, and schedule
 ## Architecture
 
 - **Frontend**: React + TypeScript (Vite)
+- **Streamlit Frontend**: Minimal Streamlit layer (Milestone 3 requirement)
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL
 - **ETL**: Python scripts for data generation and loading
@@ -51,7 +52,7 @@ This will start:
 
 ### 5. Access the Application
 
-- **Frontend**: http://localhost:5173
+- **React Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8008
 - **API Docs**: http://localhost:8008/docs
 - **pgAdmin**: http://localhost:5050
@@ -77,6 +78,64 @@ docker-compose exec db psql -U postgres -d university_db
 - URL: http://localhost:5050
 - Email: admin@admin.com
 - Password: (from .env file)
+
+## How to Run Streamlit Frontend
+
+A minimal Streamlit frontend has been added to satisfy Milestone 3 requirements. This does **not** replace or modify the existing React frontend - both can run independently.
+
+### Prerequisites
+
+1. Ensure the API service is running (see "Quick Start" section above)
+2. Python 3.8+ installed
+3. Streamlit dependencies installed
+
+### Installation
+
+1. **Navigate to the Streamlit app directory:**
+   ```bash
+   cd university_app/streamlit_app
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   Or install globally:
+   ```bash
+   pip install streamlit requests pandas
+   ```
+
+### Running the Streamlit App
+
+1. **Start the Streamlit app:**
+   ```bash
+   streamlit run app.py
+   ```
+
+2. **Access the Streamlit frontend:**
+   - The app will automatically open in your browser at http://localhost:8501
+   - If it doesn't open automatically, navigate to the URL shown in the terminal
+
+### Configuration
+
+The Streamlit app connects to the FastAPI backend at `http://localhost:8008` by default.
+
+To use a different API URL, set the environment variable:
+```bash
+export STREAMLIT_API_URL=http://your-api-url:8008
+streamlit run app.py
+```
+
+### Features
+
+The Streamlit frontend provides:
+- Course section browsing with filters (Year, Semester, Course Type, Search)
+- Course details display in table format
+- Expandable detailed view for each course
+- Uses only built-in Streamlit components (no third-party UI libraries)
+
+**Note:** The Streamlit frontend is minimal and uses default Streamlit styling. The primary UI remains the React frontend, which is unchanged.
 
 ### Regenerating Data
 

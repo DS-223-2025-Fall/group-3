@@ -1,36 +1,24 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Header'
 import SearchFilters from '@/components/SearchFilters'
 import CourseTable from '@/components/CourseTable'
 import DraftSchedule from '@/components/DraftSchedule'
-import { Course, fetchCourses, getUIPositions, trackUIClick, UIElementPosition } from '@/lib/api'
-import { mockCourses } from '@/data/mockCourses'
+import SavedSchedules from '@/components/SavedSchedules'
+import { Course, fetchCourses } from '@/lib/api'
 
 const Index = () => {
-  const [year, setYear] = useState('2024')
-  const [semester, setSemester] = useState('Fall')
+  const { isAuthenticated } = useAuth()
+  const [year, setYear] = useState('All')
+  const [semester, setSemester] = useState('All')
   const [courseType, setCourseType] = useState('All')
   const [searchText, setSearchText] = useState('')
-  const [courses, setCourses] = useState<Course[]>(mockCourses)
+  const [courses, setCourses] = useState<Course[]>([])
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set())
   const [isDraftOpen, setIsDraftOpen] = useState(false)
+  const [isSavedSchedulesOpen, setIsSavedSchedulesOpen] = useState(false)
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
-  const [uiConfig, setUiConfig] = useState<UIElementPosition | null>(null)
-  const [studentId] = useState(1) // In production, get from auth context
-
-  // Load UI positions on mount
-  useEffect(() => {
-    const loadUIPositions = async () => {
-      try {
-        const positions = await getUIPositions(studentId)
-        setUiConfig(positions)
-      } catch (error) {
-        console.error('Failed to load UI positions:', error)
-      }
-    }
-    loadUIPositions()
-  }, [studentId])
 
   // Load courses on mount and when filters change
   useEffect(() => {
@@ -40,36 +28,22 @@ const Index = () => {
   const loadCourses = async () => {
     try {
       const fetchedCourses = await fetchCourses({
-        year,
-        semester,
+        year: year === 'All' ? undefined : year,
+        semester: semester === 'All' ? undefined : semester,
         courseType: courseType === 'All' ? undefined : courseType,
         search: searchText || undefined,
       })
       
-      if (fetchedCourses.length > 0) {
-        setCourses(fetchedCourses)
-      } else {
-        // Use mock data if API doesn't return results
-        let filtered = [...mockCourses]
-        
-        if (searchText) {
-          filtered = filtered.filter(
-            (c) =>
-              c.name.toLowerCase().includes(searchText.toLowerCase()) ||
-              c.code.toLowerCase().includes(searchText.toLowerCase())
-          )
-        }
-        
-        if (courseType !== 'All') {
-          // Filter by course type if needed (mock data doesn't have this field)
-        }
-        
-        setCourses(filtered)
+      // Always use real database data - no mock fallback
+      setCourses(fetchedCourses)
+      
+      if (fetchedCourses.length === 0) {
+        toast.info('No courses found for the selected filters.')
       }
     } catch (error) {
       console.error('Error loading courses:', error)
-      toast.error('Failed to load courses. Using mock data.')
-      setCourses(mockCourses)
+      toast.error('Failed to load courses from database.')
+      setCourses([])
     }
   }
 
@@ -143,16 +117,6 @@ const Index = () => {
   }
 
   const handleSearch = () => {
-    // Track search button click
-    if (uiConfig) {
-      trackUIClick({
-        student_id: studentId,
-        element_type: 'button',
-        element_id: 'search_button',
-        element_position: uiConfig.ui_config.buttons,
-        page_url: window.location.href
-      })
-    }
     loadCourses()
   }
 
@@ -167,15 +131,17 @@ const Index = () => {
     toast.success('Course removed from schedule')
   }
 
+  // Filter courses that are in the selectedCourses Set
+  // This ensures we only show courses that are actually in the current courses list
   const selectedCoursesList = courses.filter((c) => selectedCourses.has(c.id))
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header uiConfig={uiConfig} />
+      <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
+        <div className="mb-6 md:ml-6">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            Courses by Semester
+            {isAuthenticated ? 'Registration for Courses' : 'Courses by Semester'}
           </h1>
           <p className="text-gray-600">
             Browse and select courses for the {semester} {year} semester.
@@ -193,8 +159,8 @@ const Index = () => {
           onSearchTextChange={setSearchText}
           onSearch={handleSearch}
           onDraftSchedule={handleDraftSchedule}
-          uiConfig={uiConfig}
-          studentId={studentId}
+          onSavedSchedules={() => setIsSavedSchedulesOpen(true)}
+          isAuthenticated={isAuthenticated}
         />
 
         <CourseTable
@@ -202,6 +168,7 @@ const Index = () => {
           selectedCourses={selectedCourses}
           onCourseSelect={handleCourseSelect}
           onClusterFilter={handleClusterFilter}
+          showCluster={courseType === 'GenEd'}
         />
 
         <DraftSchedule
@@ -209,6 +176,19 @@ const Index = () => {
           onOpenChange={setIsDraftOpen}
           selectedCourses={selectedCoursesList}
           onRemoveCourse={handleRemoveCourse}
+          onScheduleSaved={() => {
+            // Refresh saved schedules if modal is open
+            if (isSavedSchedulesOpen) {
+              // Force re-render by toggling
+              setIsSavedSchedulesOpen(false)
+              setTimeout(() => setIsSavedSchedulesOpen(true), 100)
+            }
+          }}
+        />
+
+        <SavedSchedules
+          open={isSavedSchedulesOpen}
+          onOpenChange={setIsSavedSchedulesOpen}
         />
       </main>
     </div>

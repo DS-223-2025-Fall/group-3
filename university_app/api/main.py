@@ -178,7 +178,7 @@ async def delete_student(student_id: int, db: Session = Depends(get_db)):
 
 @app.get("/sections")
 async def get_sections(
-    year: Optional[int] = None,
+    year: Optional[str] = None,
     semester: Optional[str] = None,
     course_type: Optional[str] = None,
     search: Optional[str] = None,
@@ -191,13 +191,31 @@ async def get_sections(
     Input:
         year (Optional[int]): Filter by year.
         semester (Optional[str]): Filter by semester (e.g., 'Fall', 'Spring', 'Summer').
-        course_type (Optional[str]): Filter by course type (not currently used in model).
+        course_type (Optional[str]): Filter by course type (GenEd, Major, Elective).
         search (Optional[str]): Search by course name.
         db (Session): Database session.
     
     Return:
         list[dict]: List of sections with joined course, instructor, time slot, and location data.
     """
+    # Map frontend course types to database program names
+    course_type_to_program = {
+        "GenEd": "GENED",
+        "Major": "BSDS",
+        "Elective": "FND"
+    }
+    
+    # Filter by course type if provided - get course IDs first to avoid duplicates
+    filtered_course_ids = None
+    if course_type and course_type != "All":
+        program_name = course_type_to_program.get(course_type)
+        if program_name:
+            # Get course IDs that belong to this program
+            course_id_list = db.query(HasCourseDB.courseid).filter(
+                HasCourseDB.prog_name == program_name
+            ).distinct().all()
+            filtered_course_ids = [cid[0] for cid in course_id_list]
+    
     # Start with sections and join related tables
     query = db.query(
         SectionDB, CourseDB, InstructorDB, TimeSlotDB, LocationDB
@@ -211,9 +229,17 @@ async def get_sections(
         LocationDB, SectionDB.roomID == LocationDB.room_id, isouter=True
     )
     
+    # Apply course type filter if provided
+    if filtered_course_ids is not None:
+        query = query.filter(CourseDB.id.in_(filtered_course_ids))
+    
     # Filter by year and semester
     if year is not None:
-        query = query.filter(TimeSlotDB.year == year)
+        try:
+            year_int = int(year)
+            query = query.filter(TimeSlotDB.year == year_int)
+        except (ValueError, TypeError):
+            pass  # Invalid year format, skip filter
     if semester:
         query = query.filter(TimeSlotDB.semester == semester)
     
@@ -223,14 +249,48 @@ async def get_sections(
     
     results = query.all()
     
+    # Helper function to expand MWF/TTh days
+    def expand_days(day_str):
+        """Expand single day to MWF or TTh group if applicable"""
+        if not day_str:
+            return day_str
+        
+        day_lower = day_str.strip().lower()
+        # MWF pattern: if any of Mon, Wed, Fri, return all three
+        if day_lower in ['mon', 'monday']:
+            return "Monday, Wednesday, Friday"
+        elif day_lower in ['wed', 'wednesday']:
+            return "Monday, Wednesday, Friday"
+        elif day_lower in ['fri', 'friday']:
+            return "Monday, Wednesday, Friday"
+        # TTh pattern: if any of Tue, Thu, return both
+        elif day_lower in ['tue', 'tuesday']:
+            return "Tuesday, Thursday"
+        elif day_lower in ['thu', 'thursday']:
+            return "Tuesday, Thursday"
+        # Otherwise return as-is (for other days like Sat, Sun)
+        return day_str
+    
+    # Helper function to format time (remove seconds)
+    def format_time(time_str):
+        """Format time from HH:MM:SS to HH:MM"""
+        if not time_str:
+            return ""
+        # Remove seconds if present
+        if len(time_str) >= 8 and time_str.count(':') >= 2:
+            return time_str[:5]  # Take HH:MM
+        return time_str
+    
     # Format response for frontend
     formatted_sections = []
     for section, course, instructor, timeslot, location in results:
-        # Get clusters for this course
-        clusters = db.query(CourseClusterDB.cluster_id).filter(
+        # Get cluster numbers for this course by joining course_cluster with clusters table
+        cluster_numbers = db.query(ClusterDB.cluster_number).join(
+            CourseClusterDB, CourseClusterDB.cluster_id == ClusterDB.cluster_id
+        ).filter(
             CourseClusterDB.course_id == course.id
         ).all()
-        cluster_ids = [c[0] for c in clusters]
+        cluster_ids = [c[0] for c in cluster_numbers]  # cluster_ids now contains cluster_number values
         
         # Get enrollment count (taken seats)
         taken_seats = db.query(TakesDB).filter(
@@ -238,9 +298,11 @@ async def get_sections(
             TakesDB.status.in_(['enrolled', 'completed'])
         ).count()
         
-        # Format time slot
-        days = timeslot.day_of_week if timeslot else ""
-        time = f"{timeslot.start_time}-{timeslot.end_time}" if timeslot and timeslot.start_time and timeslot.end_time else ""
+        # Format time slot with day expansion and time formatting
+        days = expand_days(timeslot.day_of_week if timeslot else "")
+        start_time = format_time(timeslot.start_time) if timeslot and timeslot.start_time else ""
+        end_time = format_time(timeslot.end_time) if timeslot and timeslot.end_time else ""
+        time = f"{start_time}-{end_time}" if start_time and end_time else ""
         
         # Extract course code from name (first word) or use course ID as fallback
         course_code = str(course.id)
@@ -262,7 +324,8 @@ async def get_sections(
             "totalSeats": section.capacity or 0,
             "location": location.building_room_name if location else "",
             "duration": section.duration or "",
-            "syllabusUrl": section.syllabus_url
+            "syllabusUrl": section.syllabus_url,
+            "credits": course.credits or 0
         })
     
     return formatted_sections
