@@ -43,6 +43,4 @@ plugins:
         python:
           paths:
             - university_app
-          rendering:
-            show_source: true
 
