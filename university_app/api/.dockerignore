@@ -1,0 +1,26 @@
+# Exclude syllabi files - they are mounted as volumes, not copied into image
+syllabi/
+syllabi.zip
+
+# Exclude Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Exclude virtual environments
+venv/
+env/
+ENV/
+
+# Exclude IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
