@@ -13,5 +13,4 @@ university_app/api/Database/__pycache__/
 university_app/api/__pycache__/
 university_app/notebook/Database/__pycache__/
 university_app/api/syllabi/*.pdf
-# Note: syllabi.zip is NOT ignored - it needs to be in git for instructors
-# Extracted PDFs (*.pdf) are ignored to avoid committing duplicates
+university_app/api/syllabi.zip
