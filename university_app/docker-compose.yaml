@@ -16,7 +16,8 @@ services:
         timeout: 10s
         retries: 5
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data #persisting data 
+      # Use named volume for cross-platform compatibility (fixes Windows permission issues)
+      - postgres_data:/var/lib/postgresql/data 
             
   pgadmin:  
     container_name: ${CONTAINER_NAME_PGADMIN:-pgadmin}
@@ -101,3 +102,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+
+# Named volumes for cross-platform compatibility
+volumes:
+  postgres_data:
+    # Named volume ensures consistent permissions across Windows, macOS, and Linux
+    driver: local

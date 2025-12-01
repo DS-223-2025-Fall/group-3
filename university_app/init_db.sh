@@ -10,7 +10,7 @@ echo "=========================================="
 echo ""
 echo "This script will:"
 echo "1. Stop all containers"
-echo "2. Remove the database data directory (postgres_data/)"
+echo "2. Remove the database volume (postgres_data)"
 echo "3. Start the database"
 echo "4. Run the ETL process to load data"
 echo ""
@@ -22,12 +22,13 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo "Step 1: Stopping containers..."
-docker compose down
+echo "Step 1: Stopping containers and removing volumes..."
+docker compose down -v
 
 echo ""
-echo "Step 2: Removing database data..."
-rm -rf postgres_data/
+echo "Step 2: Cleaning up old database directory (if exists)..."
+# Clean up old directory if it exists (for backward compatibility with bind mounts)
+rm -rf postgres_data/ 2>/dev/null || true
 
 echo ""
 echo "Step 3: Starting database..."
