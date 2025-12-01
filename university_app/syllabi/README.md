@@ -22,15 +22,15 @@ Where:
 
 ## How It Works
 
-1. **Docker Volume Mount**: The entire `syllabi` directory is mounted into the API container at `/syllabi_source` (read-only). This allows the container to start even if `syllabi.zip` doesn't exist yet.
-2. **Automatic Extraction**: On container startup, the entrypoint script checks for `syllabi.zip` in the mounted directory and automatically unzips it to `/api/syllabi/` if found.
+1. **Location**: The `syllabi.zip` file is located at `university_app/api/syllabi/syllabi.zip` (inside the api directory)
+2. **Automatic Extraction**: On container startup, the entrypoint script automatically unzips the file to `/api/syllabi/` (same directory)
 3. **API Endpoint**: Files are served at `http://localhost:8008/syllabi/{filename}`
 4. **Database Reference**: The `sections` table stores the `syllabus_url` path (e.g., `/syllabi/course_1_section_1.pdf`)
 
 ## Adding/Updating Syllabi
 
 1. Create a zip file named `syllabi.zip` containing all PDF files
-2. Place the zip file in this directory (`university_app/syllabi/syllabi.zip`)
+2. Place the zip file in this directory (`university_app/api/syllabi/syllabi.zip`)
 3. Ensure PDF files inside the zip follow the naming convention: `course_{course_id}_section_1.pdf`
 4. Restart the API container: `docker-compose restart api` (or rebuild: `docker-compose up -d --build api`)
 5. The zip file will be automatically extracted on container startup
@@ -40,7 +40,7 @@ Where:
 
 To create the zip file from individual PDF files:
 ```bash
-cd university_app/syllabi
+cd university_app/api/syllabi
 zip syllabi.zip course_*.pdf
 ```
 
@@ -63,9 +63,8 @@ Or check the generated CSV file: `etl/data/course.csv`
 ## Notes
 
 - The zip file (`syllabi.zip`) is **excluded from git** (see `.gitignore`) to avoid committing large files
-- The syllabi directory is mounted as read-only (`:ro`) in docker-compose for safety
-- **The container will start successfully even if `syllabi.zip` doesn't exist** - the entrypoint script handles this gracefully
-- The extraction happens automatically on container startup (only if the zip file exists and PDFs aren't already extracted)
+- The zip file is mounted as read-only (`:ro`) in docker-compose for safety
+- The extraction happens automatically on every container startup
 - For sharing with instructors/PM, use alternative methods (see project documentation)
 - The API will return 404 if a syllabus file is missing (this is expected for MVP)
 
