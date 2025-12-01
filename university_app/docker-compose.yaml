@@ -58,7 +58,7 @@ services:
     volumes:
       - ./api:/api
       - ./etl:/etl  # Mount ETL directory for database initialization
-      - ./syllabi/syllabi.zip:/api/syllabi.zip:ro  # Mount syllabi zip file (read-only)
+      - ./syllabi:/syllabi_source:ro  # Mount syllabi directory (read-only) - works even if zip doesn't exist
     ports:
       - 8008:8000
     environment:

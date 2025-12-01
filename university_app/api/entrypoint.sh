@@ -3,7 +3,8 @@ set -e
 
 # Directory where syllabi will be extracted
 SYLLABI_DIR="/api/syllabi"
-ZIP_FILE="/api/syllabi.zip"
+# Zip file is mounted from ./syllabi directory (works even if file doesn't exist)
+ZIP_FILE="/syllabi_source/syllabi.zip"
 
 # Create syllabi directory if it doesn't exist
 mkdir -p "$SYLLABI_DIR"
@@ -30,6 +31,7 @@ elif [ -f "$ZIP_FILE" ] && [ "$PDF_COUNT" -gt 0 ]; then
     echo "Syllabi directory already contains $PDF_COUNT PDF file(s), skipping extraction"
 elif [ ! -f "$ZIP_FILE" ]; then
     echo "No syllabi zip file found at $ZIP_FILE, skipping extraction"
+    echo "Note: Place syllabi.zip in ./syllabi/ directory to enable syllabus file serving"
 fi
 
 # Execute the main command (uvicorn)
