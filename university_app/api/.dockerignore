@@ -2,6 +2,9 @@
 syllabi/
 syllabi.zip
 
+# Entrypoint is copied explicitly to /docker-entrypoint.sh in Dockerfile
+entrypoint.sh
+
 # Exclude Python cache
 __pycache__/
 *.py[cod]
