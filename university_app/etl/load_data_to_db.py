@@ -18,8 +18,8 @@ from loguru import logger
 import os
 from Database.database import engine, get_db
 from Database.models import (
-    Student, Location, Instructor, Department, Program, Course,
-    TimeSlot, Section, Prerequisites, Takes, Works, HasCourse,
+    User, Student, Location, Instructor, Department, Program, Course,
+    TimeSlot, Section, SectionName, Prerequisites, Takes, Works, HasCourse,
     Cluster, CourseCluster, Preferred,
     create_tables
 )
@@ -49,7 +49,7 @@ LOAD_ORDER = [
     "student",        # No dependencies
     "instructor",     # Depends on location
     "department",     # Depends on location
-    "program",        # Depends on department, student
+    "program",        # Depends on department
     "course",         # No dependencies
     "time_slot",      # No dependencies
     "section",        # Depends on location, time_slot, course, instructor
@@ -57,9 +57,8 @@ LOAD_ORDER = [
     "takes",          # Depends on student, section
     "works",          # Depends on instructor, department
     "hascourse",      # Depends on program, course
-    "cluster",        # Depends on program
     "course_cluster", # Depends on course, cluster
-    "preferred",      # Depends on student, cluster
+    "preferred",      # Depends on student, course
 ]
 
 
@@ -83,7 +82,8 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
 
     column_mapping = {
         "student": {"id": "student_id", "name": "student_name"},
-        "program": {"dept_name": "deptID"},
+        # Note: program CSV already has dept_name, matching the model field
+        # No mapping needed for program table
     }
 
     mapping = column_mapping.get(csv_filename, {})

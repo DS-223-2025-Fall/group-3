@@ -1,5 +1,4 @@
 """
-University Data Generator - Updated according to ERD.
 
 Generates data for:
 - Students (10 students, credits 0-100)

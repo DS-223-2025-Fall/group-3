@@ -9,12 +9,13 @@ tracking for A/B testing purposes.
 # Import all models so they are registered with SQLAlchemy Base metadata
 # This ensures all tables are created when Base.metadata.create_all() is called
 from Database.models import (
-    StudentDB, SectionDB, TakesDB, LocationDB, InstructorDB, 
+    UserDB, StudentDB, SectionDB, SectionNameDB, TakesDB, LocationDB, InstructorDB, 
     DepartmentDB, ProgramDB, CourseDB, TimeSlotDB, PrerequisitesDB, 
     WorksDB, HasCourseDB, ClusterDB, CourseClusterDB, PreferredDB,
     RecommendationResultDB, ABTestAssignmentDB, UIElementClickDB, Base
 )
 from Database.schema import (
+    User, UserCreate,
     Student, StudentCreate,
     Location, LocationCreate,
     Instructor, InstructorCreate,
@@ -23,6 +24,7 @@ from Database.schema import (
     Course, CourseCreate,
     TimeSlot, TimeSlotCreate,
     Section, SectionCreate,
+    SectionName, SectionNameCreate,
     Prerequisites, PrerequisitesCreate,
     Takes, TakesCreate,
     Works, WorksCreate,

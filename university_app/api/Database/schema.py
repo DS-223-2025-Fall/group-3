@@ -8,12 +8,29 @@ from typing import Optional
 
 # Pydantic models for request and response validation
 
+# User Schemas
+class User(BaseModel):
+    """Response schema for user"""
+    user_id: int
+    username: str
+    password: str  # Note: In production, never return password in response
+    student_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class UserCreate(BaseModel):
+    """Request schema for creating a user"""
+    username: str
+    password: str
+    student_id: Optional[int] = None
+
 # Student Schemas
 class Student(BaseModel):
     """Response schema for student"""
     student_id: int
     student_name: str
-    credit: int
+    credit: Optional[int] = None
     program_name: str
 
     class Config:
@@ -22,27 +39,27 @@ class Student(BaseModel):
 class StudentCreate(BaseModel):
     """Request schema for creating a student"""
     student_name: str
-    credit: int = 0
+    credit: Optional[int] = None
     program_name: str
 
 # Location Schemas
 class Location(BaseModel):
     """Response schema for location"""
     room_id: int
-    building_room_name: Optional[str] = None
+    building_room_name: str
 
     class Config:
         from_attributes = True
 
 class LocationCreate(BaseModel):
     """Request schema for creating a location"""
-    building_room_name: Optional[str] = None
+    building_room_name: str
 
 # Instructor Schemas
 class Instructor(BaseModel):
     """Response schema for instructor"""
     id: int
-    name: Optional[str] = None
+    name: str
     bio_url: Optional[str] = None
     room_id: Optional[int] = None
 
@@ -51,7 +68,7 @@ class Instructor(BaseModel):
 
 class InstructorCreate(BaseModel):
     """Request schema for creating an instructor"""
-    name: Optional[str] = None
+    name: str
     bio_url: Optional[str] = None
     room_id: Optional[int] = None
 
@@ -73,7 +90,7 @@ class DepartmentCreate(BaseModel):
 class Program(BaseModel):
     """Response schema for program"""
     prog_name: str
-    deptID: Optional[str] = None
+    dept_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -81,54 +98,53 @@ class Program(BaseModel):
 class ProgramCreate(BaseModel):
     """Request schema for creating a program"""
     prog_name: str
-    deptID: Optional[str] = None
+    dept_name: Optional[str] = None
 
-# Course Schemas
 class Course(BaseModel):
     """Response schema for course"""
     id: int
-    name: Optional[str] = None
-    credits: Optional[int] = None
+    name: str
+    credits: int
 
     class Config:
         from_attributes = True
 
 class CourseCreate(BaseModel):
     """Request schema for creating a course"""
-    name: Optional[str] = None
-    credits: Optional[int] = None
+    name: str
+    credits: int
 
 # TimeSlot Schemas
 class TimeSlot(BaseModel):
     """Response schema for time slot"""
     time_slot_id: int
-    day_of_week: Optional[str] = None
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    year: Optional[int] = None
-    semester: Optional[str] = None
+    day_of_week: str
+    start_time: str
+    end_time: str
+    year: int
+    semester: str
 
     class Config:
         from_attributes = True
 
 class TimeSlotCreate(BaseModel):
     """Request schema for creating a time slot"""
-    day_of_week: Optional[str] = None
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    year: Optional[int] = None
-    semester: Optional[str] = None
+    day_of_week: str
+    start_time: str
+    end_time: str
+    year: int
+    semester: str
 
 # Section Schemas
 class Section(BaseModel):
     """Response schema for section"""
     id: int
-    capacity: Optional[int] = None
-    roomID: Optional[int] = None
+    capacity: int
+    roomID: int
     duration: Optional[str] = None
-    time_slot_id: Optional[int] = None
-    course_id: Optional[int] = None
-    instructor_id: Optional[int] = None
+    time_slot_id: int
+    course_id: int
+    instructor_id: int
     syllabus_url: Optional[str] = None
 
     class Config:
@@ -136,13 +152,27 @@ class Section(BaseModel):
 
 class SectionCreate(BaseModel):
     """Request schema for creating a section"""
-    capacity: Optional[int] = None
-    roomID: Optional[int] = None
+    capacity: int
+    roomID: int
     duration: Optional[str] = None
-    time_slot_id: Optional[int] = None
-    course_id: Optional[int] = None
-    instructor_id: Optional[int] = None
+    time_slot_id: int
+    course_id: int
+    instructor_id: int
     syllabus_url: Optional[str] = None
+
+# SectionName Schemas
+class SectionName(BaseModel):
+    """Response schema for section_name"""
+    section_name: str
+    section_id: int
+
+    class Config:
+        from_attributes = True
+
+class SectionNameCreate(BaseModel):
+    """Request schema for creating a section_name"""
+    section_name: str
+    section_id: int
 
 # Prerequisites Schemas
 class Prerequisites(BaseModel):
@@ -208,18 +238,16 @@ class HasCourseCreate(BaseModel):
 class Cluster(BaseModel):
     """Response schema for cluster"""
     cluster_id: int
-    cluster_number: int
-    prog_name: str
-    description: Optional[str] = None
+    cluster_number: Optional[int] = None
+    theme: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 class ClusterCreate(BaseModel):
     """Request schema for creating a cluster"""
-    cluster_number: int
-    prog_name: str
-    description: Optional[str] = None
+    cluster_number: Optional[int] = None
+    theme: Optional[str] = None
 
 # CourseCluster Schemas
 class CourseCluster(BaseModel):
@@ -288,19 +316,20 @@ class RecommendationResult(BaseModel):
     """Response schema for recommendation result"""
     id: int
     student_id: int
-    course_id: int
+    course_id: Optional[int] = None  # Deprecated: can be derived from section->course
     recommended_section_id: int
-    course_name: str
-    cluster: Optional[str] = None
-    credits: Optional[int] = None
-    time_slot: Optional[str] = None
+    time_slot: Optional[int] = None
     recommendation_score: Optional[str] = None
     why_recommended: Optional[str] = None
     slot_number: Optional[int] = None
     model_version: Optional[str] = None
     time_preference: Optional[str] = None
-    semester: Optional[str] = None
-    year: Optional[int] = None
+    semester: Optional[str] = None  # Kept for backward compatibility
+    year: Optional[int] = None  # Kept for backward compatibility
+    # Deprecated fields (kept for backward compatibility, can be derived from section->course)
+    course_name: Optional[str] = None  # Deprecated: can be derived from section->course
+    cluster: Optional[str] = None  # Deprecated: can be derived from course_cluster
+    credits: Optional[int] = None  # Deprecated: can be derived from course
     created_at: str
     updated_at: Optional[str] = None
 
@@ -310,16 +339,17 @@ class RecommendationResult(BaseModel):
 class RecommendationResultCreate(BaseModel):
     """Request schema for creating a recommendation result"""
     student_id: int
-    course_id: int
+    course_id: Optional[int] = None  # Deprecated: can be derived from section->course
     recommended_section_id: int
-    course_name: str
-    cluster: Optional[str] = None
-    credits: Optional[int] = None
-    time_slot: Optional[str] = None
+    time_slot: Optional[int] = None
     recommendation_score: Optional[str] = None
     why_recommended: Optional[str] = None
     slot_number: Optional[int] = None
     model_version: Optional[str] = None
     time_preference: Optional[str] = None
-    semester: Optional[str] = None
-    year: Optional[int] = None
+    semester: Optional[str] = None  # Kept for backward compatibility
+    year: Optional[int] = None  # Kept for backward compatibility
+    # Deprecated fields (kept for backward compatibility)
+    course_name: Optional[str] = None
+    cluster: Optional[str] = None
+    credits: Optional[int] = None
