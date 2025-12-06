@@ -16,7 +16,7 @@ Prerequisites:
 import pandas as pd
 from loguru import logger
 import os
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from Database.database import engine, get_db
 from Database.models import (
     User, Student, Location, Instructor, Department, Program, Course,
@@ -239,16 +239,62 @@ def main():
         db.commit()
         
         # Now clear all ETL tables in reverse dependency order to avoid foreign key constraints
+        # Use raw SQL DELETE to avoid ORM schema mismatches (e.g., clusters.theme column issue)
         logger.info("Clearing existing data from ETL tables (in reverse dependency order)...")
+        
+        # First, rollback any existing failed transaction
+        try:
+            db.rollback()
+        except:
+            pass
+        
         for table_name in reversed(LOAD_ORDER):
             model_class = TABLE_MODELS[table_name]
-            existing_count = db.query(model_class).count()
-            if existing_count > 0:
-                logger.info(f"Clearing {existing_count} records from {table_name}...")
-                db.query(model_class).delete()
+            table_name_db = model_class.__tablename__
+            
+            try:
+                # Check if table exists
+                inspector = inspect(db.bind)
+                table_names = inspector.get_table_names()
+                
+                if table_name_db not in table_names:
+                    logger.debug(f"Table {table_name_db} does not exist yet, skipping clear")
+                    continue
+                
+                # Use raw SQL DELETE to avoid ORM schema mismatches
+                # This bypasses any column mismatch issues (e.g., missing theme column in clusters)
+                try:
+                    # Start a savepoint for this table's operation
+                    db.begin_nested()
+                    result = db.execute(text(f'DELETE FROM "{table_name_db}"'))
+                    deleted_count = result.rowcount
+                    db.commit()  # Commit the nested transaction
+                    
+                    if deleted_count > 0:
+                        logger.info(f"Cleared {deleted_count} records from {table_name} ({table_name_db})")
+                    else:
+                        logger.debug(f"Table {table_name} ({table_name_db}) is already empty")
+                except Exception as delete_error:
+                    # Rollback the nested transaction and continue
+                    db.rollback()
+                    logger.warning(f"Could not clear {table_name} ({table_name_db}): {delete_error}. Continuing...")
+                    continue
+                        
+            except Exception as e:
+                logger.warning(f"Error checking/clearing {table_name} ({table_name_db}): {e}. Continuing...")
+                try:
+                    db.rollback()
+                except:
+                    pass
+                continue
         
-        db.commit()
-        logger.info("All existing data cleared. Loading fresh data...")
+        # Final commit for any remaining operations
+        try:
+            db.commit()
+            logger.info("All existing data cleared. Loading fresh data...")
+        except Exception as e:
+            logger.warning(f"Error in final commit: {e}. Rolling back...")
+            db.rollback()
 
         # Now load tables in dependency order
         data_dir = "data"
