@@ -4,12 +4,16 @@ interface User {
   name: string
   username: string
   profilePhoto?: string
+  student_name?: string
+  student_id?: number
+  program_name?: string
+  credit?: number
 }
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
-  login: (username: string, password: string) => boolean
+  login: (username: string, password: string) => Promise<boolean>
   logout: () => void
 }
 
@@ -30,30 +34,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = (username: string, password: string): boolean => {
-    // Demo: Accept "admin"/"admin" or "student"/"password" as valid credentials
-    const validCredentials = [
-      { username: 'admin', password: 'admin', name: 'Admin User' },
-      { username: 'student', password: 'password', name: 'John Smith' },
-    ]
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8008'
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password.trim(),
+        }),
+      })
 
-    const credential = validCredentials.find(
-      (cred) => cred.username === username.trim() && cred.password === password.trim()
-    )
+      if (!response.ok) {
+        return false
+      }
 
-    if (!credential) {
+      const data = await response.json()
+      
+      const newUser: User = {
+        name: data.student?.student_name || data.username,
+        username: data.username,
+        profilePhoto: undefined,
+        student_name: data.student?.student_name,
+        student_id: data.student_id,
+        program_name: data.student?.program_name,
+        credit: data.student?.credit,
+      }
+
+      setUser(newUser)
+      localStorage.setItem('auth_user', JSON.stringify(newUser))
+      return true
+    } catch (error) {
+      console.error('Login error:', error)
       return false
     }
-
-    const newUser: User = {
-      name: credential.name,
-      username: credential.username,
-      profilePhoto: undefined, // Could be a URL in production
-    }
-
-    setUser(newUser)
-    localStorage.setItem('auth_user', JSON.stringify(newUser))
-    return true
   }
 
   const logout = () => {

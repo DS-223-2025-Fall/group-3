@@ -1,12 +1,10 @@
 """
-Database Models for Notebook - matches ETL models
+Database Models for Notebook - matches API models
 """
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, UniqueConstraint
 from sqlalchemy.sql import func
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from Database.database import Base
 
 class User(Base):
     """
@@ -105,11 +103,11 @@ class Section(Base):
     id = Column(Integer, primary_key=True)
     capacity = Column(Integer, nullable=False)
     roomID = Column(Integer, ForeignKey('locations.room_id'), nullable=False)
-    duration = Column(String(50), nullable=True)
+    duration = Column(String(50))
     time_slot_id = Column(Integer, ForeignKey('time_slots.time_slot_id'), nullable=False)
     course_id = Column(Integer, ForeignKey('courses.id'), nullable=False)
     instructor_id = Column(Integer, ForeignKey('instructors.id'), nullable=False)
-    syllabus_url = Column(String(255), nullable=True)
+    syllabus_url = Column(String(255))
 
 
 class SectionName(Base):

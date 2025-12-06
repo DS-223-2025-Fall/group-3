@@ -121,10 +121,33 @@ def initialize_database():
                 env={**os.environ, "PYTHONPATH": f"{etl_path}:{etl_path}/Database"}
             )
             if result2.returncode != 0:
-                logger.error(f"Data loading failed: {result2.stderr}")
-                logger.error(f"Output: {result2.stdout}")
+                logger.error(f"❌ Data loading failed with return code {result2.returncode}")
+                logger.error(f"STDERR:\n{result2.stderr}")
+                logger.error(f"STDOUT:\n{result2.stdout}")
+                # Also check for specific table loading issues
+                if "section_name" in result2.stderr or "section_name" in result2.stdout:
+                    logger.error("⚠️  section_name table loading issue detected!")
+                if "users" in result2.stderr or "users" in result2.stdout:
+                    logger.error("⚠️  users table loading issue detected!")
                 return False
             logger.info("Data loading completed successfully")
+            
+            # Verify critical tables were loaded
+            logger.info("Verifying critical tables were loaded...")
+            db = next(get_db())
+            try:
+                from Database.models import UserDB, SectionNameDB
+                user_count = db.query(UserDB).count()
+                section_name_count = db.query(SectionNameDB).count()
+                logger.info(f"Verification: users={user_count}, section_name={section_name_count}")
+                if user_count == 0:
+                    logger.warning("⚠️  WARNING: users table is empty after loading!")
+                if section_name_count == 0:
+                    logger.warning("⚠️  WARNING: section_name table is empty after loading!")
+            except Exception as e:
+                logger.warning(f"Could not verify table counts: {e}")
+            finally:
+                db.close()
             
             logger.info("Database initialization completed successfully!")
             return True
@@ -153,6 +176,34 @@ def ensure_database_initialized():
         bool: True if initialization successful, False otherwise.
     """
     logger.info("Ensuring database is initialized...")
+    
+    # Drop the old 'user' table if it exists (PostgreSQL reserved word issue)
+    # We now use 'users' table name instead
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        
+        if 'user' in tables:
+            logger.warning("Found old 'user' table (reserved word). Migrating to 'users'...")
+            with engine.connect() as connection:
+                # Check if data exists in old table
+                result = connection.execute(text("SELECT COUNT(*) FROM \"user\""))
+                count = result.fetchone()[0]
+                if count > 0:
+                    logger.info(f"Found {count} records in old 'user' table")
+                    # Copy data to new table if users doesn't exist or is empty
+                    users_count = connection.execute(text("SELECT COUNT(*) FROM users")).fetchone()[0] if 'users' in tables else 0
+                    if users_count == 0:
+                        logger.info("Copying data from 'user' to 'users'...")
+                        connection.execute(text("INSERT INTO users SELECT * FROM \"user\""))
+                        connection.commit()
+                # Drop the old table
+                connection.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
+                connection.commit()
+            logger.info("Migrated from 'user' to 'users' table successfully.")
+    except Exception as e:
+        logger.warning(f"Could not migrate 'user' table: {e}. Continuing...")
     
     # First, ensure tables exist
     try:

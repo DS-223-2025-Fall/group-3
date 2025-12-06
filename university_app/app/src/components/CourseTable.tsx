@@ -34,6 +34,7 @@ export default function CourseTable({
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold">Section</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Instructor</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">When Offered</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Time</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Credits</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Taken Seats</th>
@@ -125,6 +126,7 @@ export default function CourseTable({
                     {course.instructor}
                   </a>
                 </td>
+                <td className="px-4 py-3 text-sm">{course.semesterYear || 'N/A'}</td>
                 <td className="px-4 py-3 text-sm">
                   <div>{course.days}</div>
                   <div className="text-gray-600">{course.time}</div>

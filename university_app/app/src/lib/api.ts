@@ -14,7 +14,11 @@ export interface Course {
   location: string
   duration: string
   syllabusUrl?: string
+  instructorBioUrl?: string
   credits: number
+  semester?: string
+  year?: number
+  semesterYear?: string
 }
 
 export interface Prerequisite {
@@ -59,6 +63,91 @@ export async function fetchPrerequisites(courseId: number): Promise<Prerequisite
   } catch (error) {
     console.error('Error fetching prerequisites:', error)
     return []
+  }
+}
+
+export interface Program {
+  prog_name: string
+  dept_name?: string
+}
+
+export async function fetchPrograms(): Promise<Program[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/programs`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch programs')
+    }
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching programs:', error)
+    return []
+  }
+}
+
+export interface DraftSchedule {
+  draft_schedule_id: number
+  student_id: number
+  name: string
+  created_at: string
+  updated_at?: string
+  section_ids: number[]
+}
+
+export interface DraftScheduleCreate {
+  student_id: number
+  name: string
+  section_ids: number[]
+}
+
+export async function fetchDraftSchedules(studentId?: number): Promise<DraftSchedule[]> {
+  try {
+    const url = studentId 
+      ? `${API_BASE_URL}/draft-schedules?student_id=${studentId}`
+      : `${API_BASE_URL}/draft-schedules`
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error('Failed to fetch draft schedules')
+    }
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching draft schedules:', error)
+    return []
+  }
+}
+
+export async function createDraftSchedule(schedule: DraftScheduleCreate): Promise<DraftSchedule> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/draft-schedules/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(schedule),
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to create draft schedule')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Error creating draft schedule:', error)
+    throw error
+  }
+}
+
+export async function deleteDraftSchedule(draftScheduleId: number): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/draft-schedules/${draftScheduleId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error('Failed to delete draft schedule')
+    }
+  } catch (error) {
+    console.error('Error deleting draft schedule:', error)
+    throw error
   }
 }
 

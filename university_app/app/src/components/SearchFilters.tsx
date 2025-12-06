@@ -1,4 +1,3 @@
-import { Search } from 'lucide-react'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
 import {
@@ -14,14 +13,12 @@ interface SearchFiltersProps {
   semester: string
   courseType: string
   searchText: string
+  programs?: string[]
   onYearChange: (year: string) => void
   onSemesterChange: (semester: string) => void
   onCourseTypeChange: (type: string) => void
   onSearchTextChange: (text: string) => void
-  onSearch: () => void
   onDraftSchedule: () => void
-  onSavedSchedules?: () => void
-  isAuthenticated?: boolean
 }
 
 export default function SearchFilters({
@@ -33,10 +30,7 @@ export default function SearchFilters({
   onSemesterChange,
   onCourseTypeChange,
   onSearchTextChange,
-  onSearch,
   onDraftSchedule,
-  onSavedSchedules,
-  isAuthenticated = false,
 }: SearchFiltersProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -66,7 +60,6 @@ export default function SearchFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Years</SelectItem>
-                <SelectItem value="2022">2022</SelectItem>
                 <SelectItem value="2023">2023</SelectItem>
                 <SelectItem value="2024">2024</SelectItem>
                 <SelectItem value="2025">2025</SelectItem>
@@ -111,28 +104,12 @@ export default function SearchFilters({
         </div>
         <div className="flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:gap-4 md:items-end md:justify-end">
           <Button
-            onClick={onSearch}
-            className="bg-[#1e3a5f] hover:bg-[#FFCC00] hover:text-[#1e3a5f] sm:w-auto"
-          >
-            <Search className="mr-2 h-4 w-4" />
-            Search
-          </Button>
-          <Button
             variant="outline"
             onClick={onDraftSchedule}
             className="sm:w-auto bg-[#1e3a5f] text-white hover:bg-[#FFCC00] hover:text-[#1e3a5f] border-0"
           >
             Draft a Schedule
           </Button>
-          {isAuthenticated && onSavedSchedules && (
-            <Button
-              variant="outline"
-              onClick={onSavedSchedules}
-              className="sm:w-auto bg-[#1e3a5f] text-white hover:bg-[#FFCC00] hover:text-[#1e3a5f] border-0"
-            >
-              Saved Schedules
-            </Button>
-          )}
         </div>
       </div>
     </div>

@@ -310,3 +310,41 @@ class UIElementClickDB(Base):
     
     # Timestamp
     clicked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+
+class DraftScheduleDB(Base):
+    """
+    Database model for draft schedules created by students.
+    
+    Stores draft schedule metadata. The actual sections in each schedule
+    are stored in the draft_schedule_sections junction table.
+    
+    Relationships:
+    - One student can have many draft schedules (one-to-many)
+    - One draft schedule can have many sections (many-to-many via draft_schedule_sections)
+    """
+    __tablename__ = "draft_schedules"
+    
+    draft_schedule_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    student_id = Column(Integer, ForeignKey('students.student_id'), nullable=False, index=True)
+    name = Column(String(100), nullable=False)  # e.g., "Schedule 1", "Fall 2025 Draft"
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class DraftScheduleSectionDB(Base):
+    """
+    Database model for draft_schedule_sections junction table.
+    
+    Links draft schedules to sections (many-to-many relationship).
+    This allows a draft schedule to contain multiple sections,
+    and a section can be in multiple draft schedules (though typically not).
+    
+    Relationships:
+    - Links draft_schedules to sections
+    - Composite primary key ensures no duplicate section entries per schedule
+    """
+    __tablename__ = "draft_schedule_sections"
+    
+    draft_schedule_id = Column(Integer, ForeignKey('draft_schedules.draft_schedule_id', ondelete='CASCADE'), primary_key=True, nullable=False, index=True)
+    section_id = Column(Integer, ForeignKey('sections.id', ondelete='CASCADE'), primary_key=True, nullable=False, index=True)

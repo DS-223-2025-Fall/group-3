@@ -1,199 +1,102 @@
 import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
+import { GraduationCap, BookOpen, Calendar, BarChart3, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Header from '@/components/Header'
-import SearchFilters from '@/components/SearchFilters'
-import CourseTable from '@/components/CourseTable'
-import DraftSchedule from '@/components/DraftSchedule'
-import SavedSchedules from '@/components/SavedSchedules'
-import { Course, fetchCourses } from '@/lib/api'
+import LoginModal from '@/components/LoginModal'
+import { Button } from '@/components/ui/button'
 
 const Index = () => {
   const { isAuthenticated } = useAuth()
-  const [year, setYear] = useState('All')
-  const [semester, setSemester] = useState('All')
-  const [courseType, setCourseType] = useState('All')
-  const [searchText, setSearchText] = useState('')
-  const [courses, setCourses] = useState<Course[]>([])
-  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set())
-  const [isDraftOpen, setIsDraftOpen] = useState(false)
-  const [isSavedSchedulesOpen, setIsSavedSchedulesOpen] = useState(false)
-  const [selectedCluster, setSelectedCluster] = useState<number | null>(null)
+  const navigate = useNavigate()
+  const [isLoginOpen, setIsLoginOpen] = useState(false)
 
-  // Load courses on mount and when filters change
+  // Redirect to dashboard if already authenticated
   useEffect(() => {
-    loadCourses()
-  }, [year, semester, courseType, searchText])
-
-  const loadCourses = async () => {
-    try {
-      const fetchedCourses = await fetchCourses({
-        year: year === 'All' ? undefined : year,
-        semester: semester === 'All' ? undefined : semester,
-        courseType: courseType === 'All' ? undefined : courseType,
-        search: searchText || undefined,
-      })
-      
-      // Always use real database data - no mock fallback
-      setCourses(fetchedCourses)
-      
-      if (fetchedCourses.length === 0) {
-        toast.info('No courses found for the selected filters.')
-      }
-    } catch (error) {
-      console.error('Error loading courses:', error)
-      toast.error('Failed to load courses from database.')
-      setCourses([])
+    if (isAuthenticated) {
+      navigate('/dashboard')
     }
-  }
+  }, [isAuthenticated, navigate])
 
-  const checkTimeConflict = (course1: Course, course2: Course): boolean => {
-    if (!course1.days || !course2.days || !course1.time || !course2.time) {
-      return false
-    }
-
-    const days1 = course1.days.split(',').map((d) => d.trim())
-    const days2 = course2.days.split(',').map((d) => d.trim())
-    const hasCommonDay = days1.some((day) => days2.includes(day))
-
-    if (!hasCommonDay) {
-      return false
-    }
-
-    const parseTime = (timeStr: string) => {
-      const match = timeStr.match(/(\d{2}):(\d{2})/)
-      if (!match) return null
-      return parseInt(match[1]) * 60 + parseInt(match[2])
-    }
-
-    const [start1, end1] = course1.time.split('-').map(parseTime)
-    const [start2, end2] = course2.time.split('-').map(parseTime)
-
-    if (!start1 || !end1 || !start2 || !end2) {
-      return false
-    }
-
-    return !(end1 <= start2 || end2 <= start1)
-  }
-
-  const handleCourseSelect = (courseId: string) => {
-    const newSelected = new Set(selectedCourses)
-    const course = courses.find((c) => c.id === courseId)
-
-    if (!course) return
-
-    if (newSelected.has(courseId)) {
-      newSelected.delete(courseId)
-    } else {
-      // Check for time conflicts
-      const selectedCourseList = courses.filter((c) => newSelected.has(c.id))
-      const hasConflict = selectedCourseList.some((selectedCourse) =>
-        checkTimeConflict(course, selectedCourse)
-      )
-
-      if (hasConflict) {
-        toast.error(
-          `Time conflict detected! ${course.code} conflicts with another selected course.`
-        )
-        return
-      }
-
-      newSelected.add(courseId)
-      toast.success(`${course.code} added to schedule`)
-    }
-
-    setSelectedCourses(newSelected)
-  }
-
-  const handleClusterFilter = (cluster: number) => {
-    setSelectedCluster(cluster === selectedCluster ? null : cluster)
-    // Filter courses by cluster
-    if (cluster === selectedCluster) {
-      loadCourses()
-    } else {
-      const filtered = courses.filter((c) => c.cluster.includes(cluster))
-      setCourses(filtered)
-    }
-  }
-
-  const handleSearch = () => {
-    loadCourses()
-  }
-
-  const handleDraftSchedule = () => {
-    setIsDraftOpen(true)
-  }
-
-  const handleRemoveCourse = (courseId: string) => {
-    const newSelected = new Set(selectedCourses)
-    newSelected.delete(courseId)
-    setSelectedCourses(newSelected)
-    toast.success('Course removed from schedule')
-  }
-
-  // Filter courses that are in the selectedCourses Set
-  // This ensures we only show courses that are actually in the current courses list
-  const selectedCoursesList = courses.filter((c) => selectedCourses.has(c.id))
+  const features = [
+    {
+      icon: BookOpen,
+      title: 'Browse Classes',
+      description: 'Explore available courses and find the perfect schedule for your semester.',
+    },
+    {
+      icon: Calendar,
+      title: 'Schedule',
+      description: 'View recommended schedules and manage your draft schedules.',
+    },
+    {
+      icon: BarChart3,
+      title: 'Track Progress',
+      description: 'Monitor your academic progress, credits, and statistics all in one place.',
+    },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2a4a6f] to-[#1e3a5f]">
       <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 md:ml-6">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            {isAuthenticated ? 'Registration for Courses' : 'Courses by Semester'}
+      <main className="container mx-auto px-4 py-12">
+        <div className="max-w-6xl mx-auto">
+          {/* Hero Section */}
+          <div className="text-center mb-16 mt-8">
+            <div className="flex justify-center mb-6">
+              <div className="bg-yellow-400 p-4 rounded-full">
+                <GraduationCap className="h-16 w-16 text-[#1e3a5f]" />
+              </div>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+              Welcome to AUA
           </h1>
-          <p className="text-gray-600">
-            Browse and select courses for the {semester} {year} semester.
+            <p className="text-xl md:text-2xl text-gray-200 mb-2">
+              Student Portal
+            </p>
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
+              Access your courses, manage your schedule, and track your academic progress
+            </p>
+            <Button
+              onClick={() => setIsLoginOpen(true)}
+              size="lg"
+              className="bg-yellow-400 text-[#1e3a5f] hover:bg-yellow-500 text-lg px-8 py-6 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              Log In
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Features Section */}
+          <div className="grid md:grid-cols-3 gap-8 mt-16">
+            {features.map((feature, index) => {
+              const Icon = feature.icon
+              return (
+                <div
+                  key={index}
+                  className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/20 transition-all duration-200"
+                >
+                  <div className="bg-yellow-400/20 p-3 rounded-lg w-fit mb-4">
+                    <Icon className="h-8 w-8 text-yellow-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
+                  <p className="text-gray-300">{feature.description}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Additional Info */}
+          <div className="mt-16 text-center">
+            <p className="text-gray-300 text-sm">
+              Need help? Contact the administration office for assistance with your account.
           </p>
+          </div>
         </div>
-
-        <SearchFilters
-          year={year}
-          semester={semester}
-          courseType={courseType}
-          searchText={searchText}
-          onYearChange={setYear}
-          onSemesterChange={setSemester}
-          onCourseTypeChange={setCourseType}
-          onSearchTextChange={setSearchText}
-          onSearch={handleSearch}
-          onDraftSchedule={handleDraftSchedule}
-          onSavedSchedules={() => setIsSavedSchedulesOpen(true)}
-          isAuthenticated={isAuthenticated}
-        />
-
-        <CourseTable
-          courses={courses}
-          selectedCourses={selectedCourses}
-          onCourseSelect={handleCourseSelect}
-          onClusterFilter={handleClusterFilter}
-          showCluster={courseType === 'GenEd'}
-        />
-
-        <DraftSchedule
-          open={isDraftOpen}
-          onOpenChange={setIsDraftOpen}
-          selectedCourses={selectedCoursesList}
-          onRemoveCourse={handleRemoveCourse}
-          onScheduleSaved={() => {
-            // Refresh saved schedules if modal is open
-            if (isSavedSchedulesOpen) {
-              // Force re-render by toggling
-              setIsSavedSchedulesOpen(false)
-              setTimeout(() => setIsSavedSchedulesOpen(true), 100)
-            }
-          }}
-        />
-
-        <SavedSchedules
-          open={isSavedSchedulesOpen}
-          onOpenChange={setIsSavedSchedulesOpen}
-        />
       </main>
+      <LoginModal open={isLoginOpen} onOpenChange={setIsLoginOpen} />
     </div>
   )
 }
 
 export default Index
-

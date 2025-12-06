@@ -3,6 +3,7 @@ Database Configuration for Notebook
 """
 
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
@@ -30,6 +31,9 @@ engine = create_engine(
     pool_recycle=3600,   # Recycle connections after 1 hour
     echo=False           # Set to True for SQL query logging
 )
+
+# Base class for declarative models (must be defined before importing models)
+Base = declarative_base()
 
 # SessionLocal for database operations
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

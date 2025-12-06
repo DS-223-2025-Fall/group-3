@@ -193,4 +193,32 @@ def create_tables():
     inputs: None.
     return: None. The function issues CREATE TABLE statements via SQLAlchemy metadata.
     """
+    # Drop the old 'user' table if it exists (PostgreSQL reserved word issue)
+    # We now use 'users' table name instead
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        
+        if 'user' in tables:
+            print("⚠️  Found old 'user' table (reserved word). Migrating to 'users'...")
+            with engine.connect() as connection:
+                # Check if data exists in old table
+                result = connection.execute(text("SELECT COUNT(*) FROM \"user\""))
+                count = result.fetchone()[0]
+                if count > 0:
+                    print(f"   Found {count} records in old 'user' table")
+                    # Copy data to new table if users doesn't exist or is empty
+                    users_count = connection.execute(text("SELECT COUNT(*) FROM users")).fetchone()[0] if 'users' in tables else 0
+                    if users_count == 0:
+                        print("   Copying data from 'user' to 'users'...")
+                        connection.execute(text("INSERT INTO users SELECT * FROM \"user\""))
+                        connection.commit()
+                # Drop the old table
+                connection.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
+                connection.commit()
+            print("✓ Migrated from 'user' to 'users' table successfully.")
+    except Exception as e:
+        print(f"⚠️  Could not migrate 'user' table: {e}. Continuing...")
+    
     Base.metadata.create_all(bind=engine)

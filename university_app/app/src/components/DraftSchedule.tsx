@@ -8,10 +8,9 @@ import {
   DialogTitle,
 } from './ui/dialog'
 import { Button } from './ui/button'
-import { Course } from '@/lib/api'
+import { Course, createDraftSchedule } from '@/lib/api'
 import { getInstructorLinkedIn } from '@/data/instructorLinks'
 import { useAuth } from '@/contexts/AuthContext'
-import { saveSchedule } from '@/lib/scheduleStorage'
 
 interface DraftScheduleProps {
   open: boolean
@@ -41,10 +40,10 @@ export default function DraftSchedule({
   onRemoveCourse,
   onScheduleSaved,
 }: DraftScheduleProps) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
-  const handleSaveSchedule = () => {
-    if (!isAuthenticated) {
+  const handleSaveSchedule = async () => {
+    if (!isAuthenticated || !user?.student_id) {
       toast.error('Please log in to save schedules')
       return
     }
@@ -54,10 +53,31 @@ export default function DraftSchedule({
       return
     }
 
-    const saved = saveSchedule(selectedCourses)
-    toast.success(`${saved.name} saved successfully!`)
-    onScheduleSaved?.()
-    onOpenChange(false)
+    try {
+      // Convert course IDs (strings) to section IDs (numbers)
+      const sectionIds = selectedCourses.map(course => parseInt(course.id))
+      
+      // Get existing schedules to determine next number
+      const existingSchedules = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8008'}/draft-schedules?student_id=${user.student_id}`)
+        .then(res => res.json())
+        .catch(() => [])
+      
+      const nextNumber = existingSchedules.length + 1
+      const scheduleName = `Schedule ${nextNumber}`
+      
+      const saved = await createDraftSchedule({
+        student_id: user.student_id,
+        name: scheduleName,
+        section_ids: sectionIds
+      })
+      
+      toast.success(`${saved.name} saved successfully!`)
+      onScheduleSaved?.()
+      onOpenChange(false)
+    } catch (error: any) {
+      console.error('Error saving schedule:', error)
+      toast.error(error.message || 'Failed to save schedule')
+    }
   }
   // Group courses into MWF and TTh sections
   // A course that appears on any MWF day goes in MWF section

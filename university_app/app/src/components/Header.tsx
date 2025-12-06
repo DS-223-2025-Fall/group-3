@@ -1,11 +1,8 @@
-import { useState } from 'react'
 import { GraduationCap, User } from 'lucide-react'
 import { Button } from './ui/button'
-import LoginModal from './LoginModal'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Header() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false)
   const { isAuthenticated, user, logout } = useAuth()
 
   return (
@@ -21,34 +18,21 @@ export default function Header() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              {!isAuthenticated ? (
-                <>
-                  <span className="text-lg font-semibold transition-colors duration-200 hover:text-[#ffcc00] cursor-pointer">
-                    Courses by Semester
-                  </span>
-                  <Button
-                    variant="outline"
-                    className="bg-yellow-400 text-[#1e3a5f] hover:bg-yellow-500 border-0"
-                    onClick={() => setIsLoginOpen(true)}
-                  >
-                    Log In
-                  </Button>
-                </>
-              ) : (
+              {isAuthenticated && (
                 <>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-[#E6EDF4] flex items-center justify-center border-2 border-white">
                       {user?.profilePhoto ? (
                         <img
                           src={user.profilePhoto}
-                          alt={user.name}
+                          alt={user.student_name || user.username}
                           className="h-full w-full rounded-full object-cover"
                         />
                       ) : (
                         <User className="h-6 w-6 text-[#1e3a5f]" />
                       )}
                     </div>
-                    <span className="text-lg font-semibold">{user?.name}</span>
+                    <span className="text-lg font-semibold">{user?.student_name || user?.username}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -63,7 +47,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-      <LoginModal open={isLoginOpen} onOpenChange={setIsLoginOpen} />
     </>
   )
 }

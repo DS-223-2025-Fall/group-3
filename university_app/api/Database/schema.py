@@ -353,3 +353,27 @@ class RecommendationResultCreate(BaseModel):
     course_name: Optional[str] = None
     cluster: Optional[str] = None
     credits: Optional[int] = None
+
+# Draft Schedule Schemas
+class DraftSchedule(BaseModel):
+    """Response schema for draft schedule"""
+    draft_schedule_id: int
+    student_id: int
+    name: str
+    created_at: str
+    updated_at: Optional[str] = None
+    section_ids: list[int] = []  # List of section IDs in this schedule
+
+    class Config:
+        from_attributes = True
+
+class DraftScheduleCreate(BaseModel):
+    """Request schema for creating a draft schedule"""
+    student_id: int
+    name: str
+    section_ids: list[int]  # List of section IDs to include in the schedule
+
+class DraftScheduleUpdate(BaseModel):
+    """Request schema for updating a draft schedule"""
+    name: Optional[str] = None
+    section_ids: Optional[list[int]] = None  # Replace all sections with this list

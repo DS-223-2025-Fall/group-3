@@ -52,6 +52,7 @@ def main():
         "course",
         "time_slot",
         "section",
+        "section_name",
         "prerequisites",
         "takes",
         "works",
@@ -59,6 +60,7 @@ def main():
         "cluster",
         "course_cluster",
         "preferred",
+        "users",
     ]
 
     for table_name in tables:
@@ -86,6 +88,8 @@ def main():
     print(f"Clusters: {len(dataset['cluster'])}")
     print(f"Course-Cluster: {len(dataset['course_cluster'])}")
     print(f"Preferred (student preferences): {len(dataset['preferred'])}")
+    print(f"Users: {len(dataset['users'])}")
+    print(f"Section Names: {len(dataset['section_name'])}")
 
     # Show sample data
     print("\n" + "=" * 60)
@@ -142,6 +146,20 @@ def main():
         print(f"Section ID: {sample_takes['section_id']}")
         print(f"Status: {sample_takes['status']}")
         print(f"Grade: {sample_takes['grade']}")
+
+    if len(dataset["users"]) > 0:
+        print("\n--- Sample User ---")
+        sample_user = dataset["users"][0]
+        print(f"User ID: {sample_user['user_id']}")
+        print(f"Username: {sample_user['username']}")
+        print(f"Password: {sample_user['password']}")
+        print(f"Student ID: {sample_user['student_id']}")
+
+    if len(dataset["section_name"]) > 0:
+        print("\n--- Sample Section Name ---")
+        sample_section_name = dataset["section_name"][0]
+        print(f"Section Name: {sample_section_name['section_name']}")
+        print(f"Section ID: {sample_section_name['section_id']}")
 
     print("\n" + "=" * 60)
     print("Data generation complete!")

@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -19,31 +20,44 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
+  const navigate = useNavigate()
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
+    setIsLoading(true)
 
-    // Simple validation - in a real app, this would call an API
+    // Simple validation
     if (!username.trim() || !password.trim()) {
-      setError('Incorrect username or password')
+      setError('Please enter both username and password')
+      setIsLoading(false)
       return
     }
 
-    // Use auth context login function
-    const isValid = login(username, password)
+    try {
+      // Use auth context login function (now async)
+      const isValid = await login(username, password)
 
-    if (!isValid) {
-      setError('Incorrect username or password')
-      return
+      if (!isValid) {
+        setError('Incorrect username or password')
+        setIsLoading(false)
+        return
+      }
+
+      // Success - close modal, reset form, and navigate to dashboard
+      onOpenChange(false)
+      setUsername('')
+      setPassword('')
+      setError('')
+      navigate('/dashboard')
+    } catch (error) {
+      setError('An error occurred during login. Please try again.')
+      setIsLoading(false)
+    } finally {
+      setIsLoading(false)
     }
-
-    // Success - close modal and reset form
-    onOpenChange(false)
-    setUsername('')
-    setPassword('')
-    setError('')
   }
 
   const handleClose = () => {
@@ -118,14 +132,16 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
               variant="outline"
               onClick={handleClose}
               className="border-gray-300"
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               className="bg-[#003B70] hover:bg-[#FFCC00] hover:text-[#003B70] text-white transition-colors duration-200"
+              disabled={isLoading}
             >
-              Log In
+              {isLoading ? 'Logging in...' : 'Log In'}
             </Button>
           </div>
         </form>

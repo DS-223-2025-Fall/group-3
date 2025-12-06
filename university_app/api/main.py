@@ -12,7 +12,8 @@ from Database.models import (
     UserDB, StudentDB, SectionDB, SectionNameDB, TakesDB, LocationDB, InstructorDB, 
     DepartmentDB, ProgramDB, CourseDB, TimeSlotDB, PrerequisitesDB, 
     WorksDB, HasCourseDB, ClusterDB, CourseClusterDB, PreferredDB,
-    RecommendationResultDB, ABTestAssignmentDB, UIElementClickDB, Base
+    RecommendationResultDB, ABTestAssignmentDB, UIElementClickDB,
+    DraftScheduleDB, DraftScheduleSectionDB, Base
 )
 from Database.schema import (
     User, UserCreate,
@@ -33,7 +34,8 @@ from Database.schema import (
     CourseCluster, CourseClusterCreate,
     Preferred, PreferredCreate,
     RecommendationResult, RecommendationResultCreate,
-    UIElementPosition, UIElementClick, UIElementClickCreate
+    UIElementPosition, UIElementClick, UIElementClickCreate,
+    DraftSchedule, DraftScheduleCreate, DraftScheduleUpdate
 )
 from Database.database import get_db, engine
 from Database.init_db import ensure_database_initialized
@@ -42,6 +44,7 @@ from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import os
 import json
 from datetime import datetime
@@ -77,6 +80,49 @@ async def startup_event():
         None
     """
     ensure_database_initialized()
+
+# AUTHENTICATION ENDPOINTS
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+@app.post("/auth/login", response_model=dict)
+async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate a user with username and password.
+    
+    Input:
+        credentials (LoginRequest): Username and password
+        db (Session): Database session
+    
+    Return:
+        dict: User information including user_id, username, student_id, and student info
+    
+    Raises:
+        HTTPException: If credentials are invalid
+    """
+    user = db.query(UserDB).filter(UserDB.username == credentials.username).first()
+    
+    if not user or user.password != credentials.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Get student information if linked
+    student = None
+    if user.student_id:
+        student = db.query(StudentDB).filter(StudentDB.student_id == user.student_id).first()
+    
+    return {
+        "user_id": user.user_id,
+        "username": user.username,
+        "student_id": user.student_id,
+        "student": {
+            "student_id": student.student_id,
+            "student_name": student.student_name,
+            "credit": student.credit,
+            "program_name": student.program_name
+        } if student else None
+    }
 
 # STUDENT ENDPOINTS
 
@@ -200,23 +246,14 @@ async def get_sections(
     Return:
         list[dict]: List of sections with joined course, instructor, time slot, and location data.
     """
-    # Map frontend course types to database program names
-    course_type_to_program = {
-        "GenEd": "GENED",
-        "Major": "BSDS",
-        "Elective": "FND"
-    }
-    
-    # Filter by course type if provided - get course IDs first to avoid duplicates
+    # Filter by course type if provided - course_type is now the program name directly
     filtered_course_ids = None
     if course_type and course_type != "All":
-        program_name = course_type_to_program.get(course_type)
-        if program_name:
-            # Get course IDs that belong to this program
-            course_id_list = db.query(HasCourseDB.courseid).filter(
-                HasCourseDB.prog_name == program_name
-            ).distinct().all()
-            filtered_course_ids = [cid[0] for cid in course_id_list]
+        # Get course IDs that belong to this program
+        course_id_list = db.query(HasCourseDB.courseid).filter(
+            HasCourseDB.prog_name == course_type
+        ).distinct().all()
+        filtered_course_ids = [cid[0] for cid in course_id_list]
     
     # Start with sections and join related tables
     query = db.query(
@@ -313,6 +350,14 @@ async def get_sections(
             if name_parts:
                 course_code = name_parts[0]
         
+        # Format semester and year (e.g., "Fall 2023")
+        semester_year = ""
+        if timeslot:
+            semester_name = timeslot.semester or ""
+            year_value = timeslot.year or ""
+            if semester_name and year_value:
+                semester_year = f"{semester_name} {year_value}"
+        
         formatted_sections.append({
             "id": str(section.id),
             "code": course_code,
@@ -327,7 +372,10 @@ async def get_sections(
             "location": location.building_room_name if location else "",
             "duration": section.duration or "",
             "syllabusUrl": section.syllabus_url,
-            "credits": course.credits or 0
+            "credits": course.credits or 0,
+            "semester": timeslot.semester if timeslot else "",
+            "year": timeslot.year if timeslot else None,
+            "semesterYear": semester_year
         })
     
     return formatted_sections
@@ -1936,3 +1984,261 @@ async def get_ui_statistics(db: Session = Depends(get_db)):
         },
         'by_element': result
     }
+
+# DRAFT SCHEDULE ENDPOINTS
+
+@app.get("/draft-schedules", response_model=list[DraftSchedule])
+async def get_draft_schedules(
+    student_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all draft schedules, optionally filtered by student_id.
+    
+    Input:
+        student_id (Optional[int]): Filter by student ID. If not provided, returns all schedules.
+        db (Session): Database session.
+    
+    Return:
+        list[DraftSchedule]: List of draft schedules with their section IDs.
+    """
+    query = db.query(DraftScheduleDB)
+    
+    if student_id is not None:
+        query = query.filter(DraftScheduleDB.student_id == student_id)
+    
+    schedules = query.order_by(DraftScheduleDB.created_at.desc()).all()
+    
+    result = []
+    for schedule in schedules:
+        # Get section IDs for this schedule
+        section_ids = db.query(DraftScheduleSectionDB.section_id).filter(
+            DraftScheduleSectionDB.draft_schedule_id == schedule.draft_schedule_id
+        ).all()
+        section_id_list = [sid[0] for sid in section_ids]
+        
+        result.append({
+            "draft_schedule_id": schedule.draft_schedule_id,
+            "student_id": schedule.student_id,
+            "name": schedule.name,
+            "created_at": schedule.created_at.isoformat() if schedule.created_at else "",
+            "updated_at": schedule.updated_at.isoformat() if schedule.updated_at else None,
+            "section_ids": section_id_list
+        })
+    
+    return result
+
+
+@app.get("/draft-schedules/{draft_schedule_id}", response_model=DraftSchedule)
+async def get_draft_schedule(
+    draft_schedule_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific draft schedule by ID.
+    
+    Input:
+        draft_schedule_id (int): The ID of the draft schedule.
+        db (Session): Database session.
+    
+    Return:
+        DraftSchedule: The draft schedule with its section IDs.
+    
+    Raises:
+        HTTPException: If the draft schedule is not found, raises a 404 error.
+    """
+    schedule = db.query(DraftScheduleDB).filter(
+        DraftScheduleDB.draft_schedule_id == draft_schedule_id
+    ).first()
+    
+    if schedule is None:
+        raise HTTPException(status_code=404, detail="Draft schedule not found")
+    
+    # Get section IDs for this schedule
+    section_ids = db.query(DraftScheduleSectionDB.section_id).filter(
+        DraftScheduleSectionDB.draft_schedule_id == schedule.draft_schedule_id
+    ).all()
+    section_id_list = [sid[0] for sid in section_ids]
+    
+    return {
+        "draft_schedule_id": schedule.draft_schedule_id,
+        "student_id": schedule.student_id,
+        "name": schedule.name,
+        "created_at": schedule.created_at.isoformat() if schedule.created_at else "",
+        "updated_at": schedule.updated_at.isoformat() if schedule.updated_at else None,
+        "section_ids": section_id_list
+    }
+
+
+@app.post("/draft-schedules/", response_model=DraftSchedule)
+async def create_draft_schedule(
+    schedule_data: DraftScheduleCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new draft schedule.
+    
+    Input:
+        schedule_data (DraftScheduleCreate): The draft schedule data including student_id, name, and section_ids.
+        db (Session): Database session.
+    
+    Return:
+        DraftSchedule: The newly created draft schedule.
+    
+    Raises:
+        HTTPException: If student doesn't exist or sections are invalid.
+    """
+    # Verify student exists
+    student = db.query(StudentDB).filter(StudentDB.student_id == schedule_data.student_id).first()
+    if student is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Verify all sections exist
+    if schedule_data.section_ids:
+        existing_sections = db.query(SectionDB.id).filter(
+            SectionDB.id.in_(schedule_data.section_ids)
+        ).all()
+        existing_section_ids = {sid[0] for sid in existing_sections}
+        invalid_sections = set(schedule_data.section_ids) - existing_section_ids
+        if invalid_sections:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid section IDs: {list(invalid_sections)}"
+            )
+    
+    # Create draft schedule
+    new_schedule = DraftScheduleDB(
+        student_id=schedule_data.student_id,
+        name=schedule_data.name
+    )
+    db.add(new_schedule)
+    db.flush()  # Get the ID without committing
+    
+    # Add sections to the schedule
+    for section_id in schedule_data.section_ids:
+        schedule_section = DraftScheduleSectionDB(
+            draft_schedule_id=new_schedule.draft_schedule_id,
+            section_id=section_id
+        )
+        db.add(schedule_section)
+    
+    db.commit()
+    db.refresh(new_schedule)
+    
+    return {
+        "draft_schedule_id": new_schedule.draft_schedule_id,
+        "student_id": new_schedule.student_id,
+        "name": new_schedule.name,
+        "created_at": new_schedule.created_at.isoformat() if new_schedule.created_at else "",
+        "updated_at": new_schedule.updated_at.isoformat() if new_schedule.updated_at else None,
+        "section_ids": schedule_data.section_ids
+    }
+
+
+@app.put("/draft-schedules/{draft_schedule_id}", response_model=DraftSchedule)
+async def update_draft_schedule(
+    draft_schedule_id: int,
+    schedule_data: DraftScheduleUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update an existing draft schedule.
+    
+    Input:
+        draft_schedule_id (int): The ID of the draft schedule to update.
+        schedule_data (DraftScheduleUpdate): The updated schedule data.
+        db (Session): Database session.
+    
+    Return:
+        DraftSchedule: The updated draft schedule.
+    
+    Raises:
+        HTTPException: If the draft schedule is not found or sections are invalid.
+    """
+    schedule = db.query(DraftScheduleDB).filter(
+        DraftScheduleDB.draft_schedule_id == draft_schedule_id
+    ).first()
+    
+    if schedule is None:
+        raise HTTPException(status_code=404, detail="Draft schedule not found")
+    
+    # Update name if provided
+    if schedule_data.name is not None:
+        schedule.name = schedule_data.name
+    
+    # Update sections if provided
+    if schedule_data.section_ids is not None:
+        # Verify all sections exist
+        existing_sections = db.query(SectionDB.id).filter(
+            SectionDB.id.in_(schedule_data.section_ids)
+        ).all()
+        existing_section_ids = {sid[0] for sid in existing_sections}
+        invalid_sections = set(schedule_data.section_ids) - existing_section_ids
+        if invalid_sections:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid section IDs: {list(invalid_sections)}"
+            )
+        
+        # Delete existing section associations
+        db.query(DraftScheduleSectionDB).filter(
+            DraftScheduleSectionDB.draft_schedule_id == draft_schedule_id
+        ).delete()
+        
+        # Add new section associations
+        for section_id in schedule_data.section_ids:
+            schedule_section = DraftScheduleSectionDB(
+                draft_schedule_id=draft_schedule_id,
+                section_id=section_id
+            )
+            db.add(schedule_section)
+    
+    db.commit()
+    db.refresh(schedule)
+    
+    # Get updated section IDs
+    section_ids = db.query(DraftScheduleSectionDB.section_id).filter(
+        DraftScheduleSectionDB.draft_schedule_id == schedule.draft_schedule_id
+    ).all()
+    section_id_list = [sid[0] for sid in section_ids]
+    
+    return {
+        "draft_schedule_id": schedule.draft_schedule_id,
+        "student_id": schedule.student_id,
+        "name": schedule.name,
+        "created_at": schedule.created_at.isoformat() if schedule.created_at else "",
+        "updated_at": schedule.updated_at.isoformat() if schedule.updated_at else None,
+        "section_ids": section_id_list
+    }
+
+
+@app.delete("/draft-schedules/{draft_schedule_id}")
+async def delete_draft_schedule(
+    draft_schedule_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a draft schedule.
+    
+    Input:
+        draft_schedule_id (int): The ID of the draft schedule to delete.
+        db (Session): Database session.
+    
+    Return:
+        dict: Success message.
+    
+    Raises:
+        HTTPException: If the draft schedule is not found, raises a 404 error.
+    """
+    schedule = db.query(DraftScheduleDB).filter(
+        DraftScheduleDB.draft_schedule_id == draft_schedule_id
+    ).first()
+    
+    if schedule is None:
+        raise HTTPException(status_code=404, detail="Draft schedule not found")
+    
+    # Cascade delete will handle draft_schedule_sections automatically
+    db.delete(schedule)
+    db.commit()
+    
+    return {"message": "Draft schedule deleted successfully"}
