@@ -2,7 +2,8 @@
 Database models for the university ETL schema.
 """
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.sql import func
 from Database.database import Base, engine
 
 class User(Base):
@@ -187,6 +188,34 @@ class Preferred(Base):
     )
 
 
+class DraftSchedule(Base):
+    """
+    Database model for draft schedules created by students.
+    
+    Stores draft schedule metadata. The actual sections in each schedule
+    are stored in the draft_schedule_sections junction table.
+    """
+    __tablename__ = "draft_schedules"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class DraftScheduleSection(Base):
+    """
+    Database model for draft_schedule_sections junction table.
+    
+    Links draft schedules to sections (many-to-many relationship).
+    """
+    __tablename__ = "draft_schedule_sections"
+    
+    draft_schedule_id = Column(Integer, ForeignKey("draft_schedules.id", ondelete="CASCADE"), primary_key=True, nullable=False, index=True)
+    section_id = Column(Integer, ForeignKey("sections.id", ondelete="CASCADE"), primary_key=True, nullable=False, index=True)
+
+
 def check_schema_version():
     """
     Check if database schema matches current models.
@@ -204,6 +233,8 @@ def check_schema_version():
             'users': ['user_id', 'username', 'password', 'student_id'],
             'students': ['student_id', 'student_name', 'credit', 'program_name'],
             'sections': ['id', 'capacity', 'roomID', 'duration', 'time_slot_id', 'course_id', 'instructor_id', 'syllabus_url'],
+            'draft_schedules': ['id', 'user_id', 'name', 'created_at', 'updated_at'],
+            'draft_schedule_sections': ['draft_schedule_id', 'section_id'],
         }
         
         for table_name, expected_columns in schema_checks.items():
