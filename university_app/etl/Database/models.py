@@ -197,8 +197,8 @@ class DraftSchedule(Base):
     """
     __tablename__ = "draft_schedules"
     
-    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)
+    draft_schedule_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
     name = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -212,8 +212,71 @@ class DraftScheduleSection(Base):
     """
     __tablename__ = "draft_schedule_sections"
     
-    draft_schedule_id = Column(Integer, ForeignKey("draft_schedules.id", ondelete="CASCADE"), primary_key=True, nullable=False, index=True)
+    draft_schedule_id = Column(Integer, ForeignKey("draft_schedules.draft_schedule_id", ondelete="CASCADE"), primary_key=True, nullable=False, index=True)
     section_id = Column(Integer, ForeignKey("sections.id", ondelete="CASCADE"), primary_key=True, nullable=False, index=True)
+
+
+class RecommendationResult(Base):
+    """
+    Database model for storing semester recommendation results from the notebook.
+    Matches API model structure for compatibility.
+    """
+    __tablename__ = "recommendation_results"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    
+    # Foreign keys
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
+    recommended_section_id = Column(Integer, ForeignKey("sections.id"), nullable=False)
+    time_slot = Column(Integer, ForeignKey("time_slots.time_slot_id"), nullable=True)
+    
+    # Deprecated fields (kept for backward compatibility)
+    course_name = Column(String(200), nullable=True)
+    cluster = Column(String(200), nullable=True)
+    credits = Column(Integer, nullable=True)
+    
+    # Recommendation logic
+    recommendation_score = Column(String(50), nullable=True)
+    why_recommended = Column(String(1000), nullable=True)
+    slot_number = Column(Integer, nullable=True)
+    
+    # Model and context
+    model_version = Column(String(50), nullable=True)
+    time_preference = Column(String(20), nullable=True)
+    semester = Column(String(20), nullable=True)
+    year = Column(Integer, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ABTestAssignment(Base):
+    """
+    Database model for A/B test assignments.
+    """
+    __tablename__ = "ab_test_assignments"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
+    variant = Column(String(50), nullable=False)
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+
+class UIElementClick(Base):
+    """
+    Database model for tracking UI element clicks for A/B testing.
+    """
+    __tablename__ = "ui_element_clicks"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=True, index=True)
+    session_id = Column(String(100), nullable=True, index=True)
+    element_type = Column(String(50), nullable=False)
+    element_id = Column(String(100))
+    page_url = Column(String(500))
+    clicked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
 
 def check_schema_version():
@@ -233,7 +296,7 @@ def check_schema_version():
             'users': ['user_id', 'username', 'password', 'student_id'],
             'students': ['student_id', 'student_name', 'credit', 'program_name'],
             'sections': ['id', 'capacity', 'roomID', 'duration', 'time_slot_id', 'course_id', 'instructor_id', 'syllabus_url'],
-            'draft_schedules': ['id', 'user_id', 'name', 'created_at', 'updated_at'],
+            'draft_schedules': ['draft_schedule_id', 'student_id', 'name', 'created_at', 'updated_at'],
             'draft_schedule_sections': ['draft_schedule_id', 'section_id'],
         }
         
