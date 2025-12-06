@@ -168,6 +168,7 @@ def initialize_database():
 def ensure_database_initialized():
     """
     Main function to ensure database is initialized. Always runs ETL to ensure database has data (will handle existing data gracefully).
+    The ETL process handles all table creation, schema checking, and data loading.
     
     Input:
         None
@@ -176,50 +177,19 @@ def ensure_database_initialized():
         bool: True if initialization successful, False otherwise.
     """
     logger.info("Ensuring database is initialized...")
+    logger.info("ETL will handle table creation, schema checking, and data loading...")
     
-    # Drop the old 'user' table if it exists (PostgreSQL reserved word issue)
-    # We now use 'users' table name instead
-    try:
-        from sqlalchemy import text, inspect
-        inspector = inspect(engine)
-        tables = inspector.get_table_names()
-        
-        if 'user' in tables:
-            logger.warning("Found old 'user' table (reserved word). Migrating to 'users'...")
-            with engine.connect() as connection:
-                # Check if data exists in old table
-                result = connection.execute(text("SELECT COUNT(*) FROM \"user\""))
-                count = result.fetchone()[0]
-                if count > 0:
-                    logger.info(f"Found {count} records in old 'user' table")
-                    # Copy data to new table if users doesn't exist or is empty
-                    users_count = connection.execute(text("SELECT COUNT(*) FROM users")).fetchone()[0] if 'users' in tables else 0
-                    if users_count == 0:
-                        logger.info("Copying data from 'user' to 'users'...")
-                        connection.execute(text("INSERT INTO users SELECT * FROM \"user\""))
-                        connection.commit()
-                # Drop the old table
-                connection.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
-                connection.commit()
-            logger.info("Migrated from 'user' to 'users' table successfully.")
-    except Exception as e:
-        logger.warning(f"Could not migrate 'user' table: {e}. Continuing...")
-    
-    # First, ensure tables exist
-    try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created/verified.")
-    except Exception as e:
-        logger.error(f"Error creating tables: {e}")
-        return False
-    
-    # Always run ETL - it will handle existing data gracefully
+    # Run ETL - it will:
+    # 1. Check schema version and recreate tables if mismatched
+    # 2. Create all tables if they don't exist
+    # 3. Clear existing data
+    # 4. Load fresh data from CSV files
     logger.info("Running ETL to initialize/refresh database...")
     if initialize_database():
-        logger.info("Database initialization completed successfully via ETL.")
+        logger.info("✅ Database initialization completed successfully via ETL.")
         return True
     else:
-        logger.error("ETL initialization failed. Database may be incomplete.")
+        logger.error("❌ ETL initialization failed. Database may be incomplete.")
         logger.warning("To manually initialize database, run: docker compose run --rm etl bash run_etl.sh")
         return False
 

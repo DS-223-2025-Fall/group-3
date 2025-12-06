@@ -187,38 +187,121 @@ class Preferred(Base):
     )
 
 
+def check_schema_version():
+    """
+    Check if database schema matches current models.
+    Returns True if schema is up to date, False if recreation needed.
+    """
+    from sqlalchemy import text, inspect
+    
+    try:
+        inspector = inspect(engine)
+        existing_tables = inspector.get_table_names()
+        
+        # Define expected schema for critical tables
+        schema_checks = {
+            'clusters': ['cluster_id', 'cluster_number', 'theme'],
+            'users': ['user_id', 'username', 'password', 'student_id'],
+            'students': ['student_id', 'student_name', 'credit', 'program_name'],
+            'sections': ['id', 'capacity', 'roomID', 'duration', 'time_slot_id', 'course_id', 'instructor_id', 'syllabus_url'],
+        }
+        
+        for table_name, expected_columns in schema_checks.items():
+            if table_name in existing_tables:
+                actual_columns = [col['name'] for col in inspector.get_columns(table_name)]
+                # Check if all expected columns exist
+                missing_columns = [col for col in expected_columns if col not in actual_columns]
+                if missing_columns:
+                    print(f"⚠️  Schema mismatch in '{table_name}': missing columns {missing_columns}")
+                    return False
+        
+        # Check for old 'user' table (reserved word issue)
+        if 'user' in existing_tables:
+            print("⚠️  Found old 'user' table (PostgreSQL reserved word)")
+            return False
+            
+        return True
+        
+    except Exception as e:
+        print(f"⚠️  Could not check schema version: {e}")
+        return False  # Assume recreation needed on error
+
+
+def drop_all_tables():
+    """
+    Drop all tables in the database. Used for clean recreation.
+    """
+    from sqlalchemy import text, inspect
+    
+    print("⚠️  Dropping all existing tables for clean recreation...")
+    
+    try:
+        with engine.connect() as connection:
+            # Disable foreign key checks temporarily
+            connection.execute(text("SET session_replication_role = 'replica';"))
+            
+            # Drop all tables
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+            
+            for table in tables:
+                print(f"   Dropping table: {table}")
+                connection.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+            
+            # Re-enable foreign key checks
+            connection.execute(text("SET session_replication_role = 'origin';"))
+            connection.commit()
+            
+        print("✓ All tables dropped successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error dropping tables: {e}")
+        return False
+
+
 def create_tables():
     """
     Description: Creates all database tables defined by the ORM models for ETL/testing.
+    Automatically detects schema mismatches and recreates tables if needed.
     inputs: None.
     return: None. The function issues CREATE TABLE statements via SQLAlchemy metadata.
     """
-    # Drop the old 'user' table if it exists (PostgreSQL reserved word issue)
-    # We now use 'users' table name instead
-    try:
-        from sqlalchemy import text, inspect
-        inspector = inspect(engine)
-        tables = inspector.get_table_names()
-        
-        if 'user' in tables:
-            print("⚠️  Found old 'user' table (reserved word). Migrating to 'users'...")
-            with engine.connect() as connection:
-                # Check if data exists in old table
-                result = connection.execute(text("SELECT COUNT(*) FROM \"user\""))
-                count = result.fetchone()[0]
-                if count > 0:
-                    print(f"   Found {count} records in old 'user' table")
-                    # Copy data to new table if users doesn't exist or is empty
-                    users_count = connection.execute(text("SELECT COUNT(*) FROM users")).fetchone()[0] if 'users' in tables else 0
-                    if users_count == 0:
-                        print("   Copying data from 'user' to 'users'...")
-                        connection.execute(text("INSERT INTO users SELECT * FROM \"user\""))
-                        connection.commit()
-                # Drop the old table
-                connection.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
-                connection.commit()
-            print("✓ Migrated from 'user' to 'users' table successfully.")
-    except Exception as e:
-        print(f"⚠️  Could not migrate 'user' table: {e}. Continuing...")
+    from sqlalchemy import text, inspect
     
-    Base.metadata.create_all(bind=engine)
+    print("=" * 60)
+    print("Checking database schema...")
+    print("=" * 60)
+    
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+    
+    # If no tables exist, just create them
+    if not existing_tables:
+        print("No existing tables found. Creating fresh database...")
+        Base.metadata.create_all(bind=engine)
+        print("✅ All tables created successfully")
+        return
+    
+    # Check if schema matches current models
+    schema_ok = check_schema_version()
+    
+    if not schema_ok:
+        print("\n⚠️  Schema mismatch detected. Recreating all tables with correct schema...")
+        print("   This will delete all existing data and reload from CSV files.")
+        
+        # Drop all tables
+        if drop_all_tables():
+            # Create tables with correct schema
+            Base.metadata.create_all(bind=engine)
+            print("✅ All tables recreated with correct schema")
+        else:
+            print("❌ Failed to drop tables. Attempting to create missing tables...")
+            Base.metadata.create_all(bind=engine)
+    else:
+        # Schema is fine, just create any missing tables
+        print("✅ Schema is up to date. Creating any missing tables...")
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables verified")
+    
+    print("=" * 60)

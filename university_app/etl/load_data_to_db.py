@@ -299,6 +299,8 @@ def main():
         # Now load tables in dependency order
         data_dir = "data"
         total_records = 0
+        failed_tables = []
+        successful_tables = []
 
         for table_name in LOAD_ORDER:
             csv_path = os.path.join(data_dir, f"{table_name}.csv")
@@ -316,42 +318,47 @@ def main():
                     logger.error(f"   Current working directory: {os.getcwd()}")
                     logger.error(f"   Data directory: {os.path.abspath(data_dir)}")
                     logger.error(f"   Files in data directory: {os.listdir(data_dir) if os.path.exists(data_dir) else 'Directory does not exist'}")
-                    raise FileNotFoundError(error_msg)
+                    failed_tables.append(table_name)
+                    continue  # Don't raise, continue to next table
                 
                 # Check if CSV file is empty
                 file_size = os.path.getsize(csv_path)
                 if file_size == 0:
                     error_msg = f"CSV file is empty: {csv_path}"
                     logger.error(f"❌ {error_msg}")
-                    raise ValueError(error_msg)
+                    failed_tables.append(table_name)
+                    continue  # Don't raise, continue to next table
                 
                 logger.info(f"   CSV file found ({file_size} bytes)")
                 
                 # Verify parent tables exist for foreign key dependencies
                 if table_name == "users":
-                    student_count = db.query(TABLE_MODELS["student"]).count()
-                    logger.info(f"   Parent table 'student' has {student_count} records")
-                    if student_count == 0:
-                        logger.warning(f"   ⚠️  WARNING: 'student' table is empty! 'users' table requires student records.")
+                    try:
+                        student_count = db.query(TABLE_MODELS["student"]).count()
+                        logger.info(f"   Parent table 'student' has {student_count} records")
+                        if student_count == 0:
+                            logger.warning(f"   ⚠️  WARNING: 'student' table is empty! 'users' table requires student records.")
+                    except Exception as e:
+                        logger.warning(f"   Could not check parent table: {e}")
                 elif table_name == "section_name":
-                    section_count = db.query(TABLE_MODELS["section"]).count()
-                    logger.info(f"   Parent table 'section' has {section_count} records")
-                    if section_count == 0:
-                        logger.warning(f"   ⚠️  WARNING: 'section' table is empty! 'section_name' table requires section records.")
+                    try:
+                        section_count = db.query(TABLE_MODELS["section"]).count()
+                        logger.info(f"   Parent table 'section' has {section_count} records")
+                        if section_count == 0:
+                            logger.warning(f"   ⚠️  WARNING: 'section' table is empty! 'section_name' table requires section records.")
+                    except Exception as e:
+                        logger.warning(f"   Could not check parent table: {e}")
                 
                 count = load_csv_to_db(csv_path, model_class, db)
                 if count == 0:
                     logger.warning(f"⚠️  WARNING: {table_name} loaded 0 records. Check if CSV file exists and has data.")
                     logger.warning(f"   CSV path: {csv_path}")
                     logger.warning(f"   File size: {file_size} bytes")
+                    failed_tables.append(table_name)
                 else:
                     logger.info(f"✓ Successfully loaded {count} records into {model_class.__tablename__}")
+                    successful_tables.append(table_name)
                 total_records += count
-            except FileNotFoundError as e:
-                logger.error(f"❌ FAILED to load {table_name}: {e}")
-                logger.error(f"   CSV path: {csv_path}")
-                logger.error(f"   This is a CRITICAL error - the table will be empty!")
-                raise
             except Exception as e:
                 logger.error(f"❌ FAILED to load {table_name}: {e}")
                 logger.error(f"   CSV path: {csv_path}")
@@ -359,16 +366,50 @@ def main():
                 logger.error(f"   Error type: {type(e).__name__}")
                 import traceback
                 logger.error(f"   Traceback: {traceback.format_exc()}")
-                logger.error(f"   This is a CRITICAL error - the table will be empty!")
-                raise
+                logger.error(f"   Continuing to next table...")
+                failed_tables.append(table_name)
+                # Rollback failed transaction and continue
+                try:
+                    db.rollback()
+                except:
+                    pass
+                continue  # Don't raise, continue to next table
 
         logger.info(f"\n{'=' * 60}")
-        logger.info(f"SUCCESS: Loaded {total_records} total records into database")
+        logger.info(f"Data Loading Summary:")
         logger.info(f"{'=' * 60}")
+        logger.info(f"Total records loaded: {total_records}")
+        logger.info(f"Successful tables: {len(successful_tables)}/{len(LOAD_ORDER)}")
+        logger.info(f"Failed tables: {len(failed_tables)}/{len(LOAD_ORDER)}")
+        
+        if successful_tables:
+            logger.info(f"\n✅ Successfully loaded tables:")
+            for table in successful_tables:
+                logger.info(f"   - {table}")
+        
+        if failed_tables:
+            logger.warning(f"\n❌ Failed tables:")
+            for table in failed_tables:
+                logger.warning(f"   - {table}")
+            logger.warning(f"\nTo fix: docker compose down -v && docker compose up -d")
+            # Exit with error code if critical tables failed
+            critical_tables = ["location", "student", "instructor", "course", "section"]
+            failed_critical = [t for t in failed_tables if t in critical_tables]
+            if failed_critical:
+                logger.error(f"\n❌ CRITICAL tables failed: {failed_critical}")
+                logger.error(f"Database is incomplete and may not function properly!")
+                raise Exception(f"Critical tables failed to load: {failed_critical}")
+        else:
+            logger.info(f"\n{'=' * 60}")
+            logger.info(f"✅ SUCCESS: All tables loaded successfully!")
+            logger.info(f"{'=' * 60}")
 
     except Exception as e:
         logger.error(f"Error during data loading: {e}")
-        db.rollback()
+        try:
+            db.rollback()
+        except:
+            pass
         raise
     finally:
         db.close()
