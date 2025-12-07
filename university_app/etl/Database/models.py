@@ -252,33 +252,6 @@ class RecommendationResult(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
-class ABTestAssignment(Base):
-    """
-    Database model for A/B test assignments.
-    """
-    __tablename__ = "ab_test_assignments"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False, index=True)
-    variant = Column(String(50), nullable=False)
-    assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
-
-
-class UIElementClick(Base):
-    """
-    Database model for tracking UI element clicks for A/B testing.
-    """
-    __tablename__ = "ui_element_clicks"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    student_id = Column(Integer, ForeignKey("students.student_id"), nullable=True, index=True)
-    session_id = Column(String(100), nullable=True, index=True)
-    element_type = Column(String(50), nullable=False)
-    element_id = Column(String(100))
-    page_url = Column(String(500))
-    clicked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
-
-
 def check_schema_version():
     """
     Check if database schema matches current models.

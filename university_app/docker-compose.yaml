@@ -42,6 +42,7 @@ services:
       - 3000:3000
     volumes:
       - ./etl:/etl
+      - ./shared:/shared  # Mount shared module for recommendation generation
     environment:
       - DATABASE_URL=${DATABASE_URL}
     depends_on: 
@@ -58,6 +59,7 @@ services:
     # command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn main:app --host 0.0.0.0'
     volumes:
       - ./api:/api
+      - ./shared:/shared  # Mount shared module for recommender
       - ./etl:/etl  # Mount ETL directory for database initialization
     ports:
       - 8008:8000

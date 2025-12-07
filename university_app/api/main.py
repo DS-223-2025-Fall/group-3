@@ -1,9 +1,8 @@
 """
 FastAPI application for University Course Management System.
-Provides REST API endpoints for managing students, courses, sections, and UI A/B testing.
+Provides REST API endpoints for managing students, courses, and sections.
 
-This module defines all API endpoints including student CRUD operations and UI element
-tracking for A/B testing purposes.
+This module defines all API endpoints including student CRUD operations.
 """
 
 # Import all models so they are registered with SQLAlchemy Base metadata
@@ -12,7 +11,7 @@ from Database.models import (
     UserDB, StudentDB, SectionDB, SectionNameDB, TakesDB, LocationDB, InstructorDB, 
     DepartmentDB, ProgramDB, CourseDB, TimeSlotDB, PrerequisitesDB, 
     WorksDB, HasCourseDB, ClusterDB, CourseClusterDB, PreferredDB,
-    RecommendationResultDB, ABTestAssignmentDB, UIElementClickDB,
+    RecommendationResultDB,
     DraftScheduleDB, DraftScheduleSectionDB, Base
 )
 from Database.schema import (
@@ -34,21 +33,51 @@ from Database.schema import (
     CourseCluster, CourseClusterCreate,
     Preferred, PreferredCreate,
     RecommendationResult, RecommendationResultCreate,
-    UIElementPosition, UIElementClick, UIElementClickCreate,
     DraftSchedule, DraftScheduleCreate, DraftScheduleUpdate
 )
 from Database.database import get_db, engine
 from Database.init_db import ensure_database_initialized
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import json
-from datetime import datetime
-from typing import Optional
+import sys
+from datetime import datetime, date
+from typing import Optional, List, Dict
+
+# Add shared module to path (works both in Docker and locally)
+# In Docker: shared is mounted at /shared
+# Locally: shared is at ../shared relative to api/
+api_dir = os.path.dirname(__file__)
+parent_dir = os.path.dirname(api_dir)
+
+# Try Docker path first (/shared)
+if os.path.exists('/shared'):
+    sys.path.insert(0, '/')
+# Try local development path
+elif os.path.exists(os.path.join(parent_dir, 'shared')):
+    sys.path.insert(0, parent_dir)
+# Fallback: try current directory structure
+else:
+    sys.path.insert(0, os.path.dirname(parent_dir) if os.path.basename(parent_dir) == 'university_app' else parent_dir)
+
+try:
+    from shared.recommender_helpers import generate_recommendations_for_student
+    from shared.semester_scheduler import SemesterScheduler
+except ImportError as e:
+    # If import fails, the endpoint will show a clear error
+    import traceback
+    print(f"Warning: Could not import shared module: {e}")
+    print(f"Python path: {sys.path}")
+    print(f"API dir: {api_dir}, Parent dir: {parent_dir}")
+    traceback.print_exc()
+    generate_recommendations_for_student = None
+    SemesterScheduler = None
 
 app = FastAPI(title="University Course Management API")
 
@@ -257,7 +286,7 @@ async def get_sections(
     
     # Start with sections and join related tables
     query = db.query(
-        SectionDB, CourseDB, InstructorDB, TimeSlotDB, LocationDB
+        SectionDB, CourseDB, InstructorDB, TimeSlotDB, LocationDB, SectionNameDB
     ).join(
         CourseDB, SectionDB.course_id == CourseDB.id
     ).join(
@@ -266,6 +295,8 @@ async def get_sections(
         TimeSlotDB, SectionDB.time_slot_id == TimeSlotDB.time_slot_id, isouter=True
     ).join(
         LocationDB, SectionDB.roomID == LocationDB.room_id, isouter=True
+    ).join(
+        SectionNameDB, SectionDB.id == SectionNameDB.section_id, isouter=True
     )
     
     # Apply course type filter if provided
@@ -322,7 +353,7 @@ async def get_sections(
     
     # Format response for frontend
     formatted_sections = []
-    for section, course, instructor, timeslot, location in results:
+    for section, course, instructor, timeslot, location, section_name in results:
         # Get cluster numbers for this course by joining course_cluster with clusters table
         cluster_numbers = db.query(ClusterDB.cluster_number).join(
             CourseClusterDB, CourseClusterDB.cluster_id == ClusterDB.cluster_id
@@ -358,12 +389,16 @@ async def get_sections(
             if semester_name and year_value:
                 semester_year = f"{semester_name} {year_value}"
         
+        # Get section letter (A, B, C, etc.) from section_name table
+        # If no section_name found, fallback to section ID
+        section_letter = section_name.section_name if section_name and section_name.section_name else str(section.id)
+        
         formatted_sections.append({
             "id": str(section.id),
             "code": course_code,
             "name": course.name or "",
             "cluster": cluster_ids,
-            "section": str(section.id),
+            "section": section_letter,
             "instructor": instructor.name if instructor else "",
             "days": days,
             "time": time,
@@ -1788,202 +1823,121 @@ async def delete_recommendation_result(result_id: int, db: Session = Depends(get
     db.commit()
     return {"message": "Recommendation result deleted successfully"}
 
-# UI ELEMENT AB TESTING ENDPOINTS
+# RECOMMENDATION GENERATION ENDPOINT
 
-# Define UI element position variants for A/B testing
-UI_POSITION_VARIANTS = {
-    'A': {
-        'search_bar': 'top',
-        'dropdowns': 'left',
-        'buttons': 'right',
-        'header_color': '#1e3a5f',  # Original blue
-        'search_button_position': 'inline'
-    },
-    'B': {
-        'search_bar': 'bottom',
-        'dropdowns': 'right',
-        'buttons': 'left',
-        'header_color': '#2d5a87',  # Lighter blue variant
-        'search_button_position': 'separate'
-    }
-}
+class GenerateRecommendationRequest(BaseModel):
+    student_id: int
+    time_preference: str = 'any'  # 'morning', 'afternoon', 'evening', or 'any'
+    semester: Optional[str] = 'Fall'
+    year: Optional[int] = 2025
 
-@app.get("/ui/positions/{student_id}", response_model=UIElementPosition)
-async def get_ui_positions(student_id: int, db: Session = Depends(get_db)):
+@app.post("/recommendations/generate")
+async def generate_recommendations(
+    request: GenerateRecommendationRequest,
+    db: Session = Depends(get_db)
+):
     """
-    Get UI element positions assigned to a student for A/B testing. If student is not assigned, creates a new assignment.
+    Generate recommendations for a specific student with the given time preference.
+    This will delete existing recommendations for the student and create new ones.
     
     Input:
-        student_id (int): The unique identifier of the student.
-        db (Session): Database session.
+        student_id (int): The student ID to generate recommendations for
+        time_preference (str): Time preference ('morning', 'afternoon', 'evening', 'any')
+        semester (str): Semester ('Fall', 'Spring', 'Summer')
+        year (int): Academic year
     
     Return:
-        UIElementPosition: The UI element position configuration.
+        dict: Success message and count of recommendations generated
     """
-    # Check if student exists
-    student = db.query(StudentDB).filter(StudentDB.student_id == student_id).first()
-    if student is None:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    # Check if assignment exists
-    assignment = db.query(ABTestAssignmentDB).filter(
-        ABTestAssignmentDB.student_id == student_id
-    ).first()
-    
-    if assignment:
-        # Parse existing config
-        ui_config = json.loads(assignment.ui_config) if assignment.ui_config else {}
-        return {
-            'student_id': assignment.student_id,
-            'test_group': assignment.test_group,
-            'ui_config': ui_config,
-            'assigned_at': assignment.assigned_at.isoformat()
-        }
-    
-    # Create new assignment (50/50 split based on student_id)
-    test_group = 'A' if student_id % 2 == 0 else 'B'
-    ui_config = UI_POSITION_VARIANTS[test_group]
-    
-    new_assignment = ABTestAssignmentDB(
-        student_id=student_id,
-        test_group=test_group,
-        ui_config=json.dumps(ui_config)
-    )
-    db.add(new_assignment)
-    db.commit()
-    db.refresh(new_assignment)
-    
-    return {
-        'student_id': new_assignment.student_id,
-        'test_group': new_assignment.test_group,
-        'ui_config': ui_config,
-        'assigned_at': new_assignment.assigned_at.isoformat()
-    }
-
-@app.post("/ui/clicks", response_model=UIElementClick)
-async def track_ui_click(click: UIElementClickCreate, db: Session = Depends(get_db)):
-    """
-    Track a click on a UI element for A/B testing analysis.
-    
-    Input:
-        click (UIElementClickCreate): The click event data.
-        db (Session): Database session.
-    
-    Return:
-        UIElementClick: The created click record.
-    """
-    # Check if student exists
-    student = db.query(StudentDB).filter(StudentDB.student_id == click.student_id).first()
-    if student is None:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    # Get student's UI position assignment (REQUIRED - clicks must be tied to an assignment)
-    assignment = db.query(ABTestAssignmentDB).filter(
-        ABTestAssignmentDB.student_id == click.student_id
-    ).first()
-    
-    if not assignment:
+    if generate_recommendations_for_student is None:
         raise HTTPException(
-            status_code=404, 
-            detail="Student not assigned to A/B test group. Please assign student first."
+            status_code=503,
+            detail="Recommendation service unavailable. Shared module not found. Please check Docker volumes."
         )
     
-    # Auto-determine position from UI config (the assignment determines the position)
-    element_position = click.element_position
-    if not element_position:
-        ui_config = json.loads(assignment.ui_config) if assignment.ui_config else {}
-        if click.element_type == 'search_bar':
-            element_position = ui_config.get('search_bar', 'top')
-        elif click.element_type == 'dropdown':
-            element_position = ui_config.get('dropdowns', 'left')
-        elif click.element_type == 'button':
-            element_position = ui_config.get('buttons', 'right')
+    try:
+        # Validate time preference
+        valid_preferences = ['morning', 'afternoon', 'evening', 'any']
+        if request.time_preference not in valid_preferences:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid time_preference. Must be one of: {valid_preferences}"
+            )
     
-    # Create click record - now connected to the assignment
-    # Note: student_id is derived from assignment to ensure consistency
-    click_record = UIElementClickDB(
-        assignment_id=assignment.id,  # Primary relationship
-        student_id=assignment.student_id,  # Derived from assignment (ensures consistency)
-        element_type=click.element_type,
-        element_id=click.element_id,
-        element_position=element_position,
-        click_count=1,
-        page_url=click.page_url
-    )
-    db.add(click_record)
-    db.commit()
-    db.refresh(click_record)
+        # Check if student exists
+        student = db.query(StudentDB).filter(StudentDB.student_id == request.student_id).first()
+        if not student:
+            raise HTTPException(status_code=404, detail=f"Student with ID {request.student_id} not found")
     
-    return {
-        'id': click_record.id,
-        'assignment_id': click_record.assignment_id,
-        'student_id': click_record.student_id,
-        'element_type': click_record.element_type,
-        'element_id': click_record.element_id,
-        'element_position': click_record.element_position,
-        'click_count': click_record.click_count,
-        'page_url': click_record.page_url,
-        'clicked_at': click_record.clicked_at.isoformat()
-    }
-
-@app.get("/ui/statistics")
-async def get_ui_statistics(db: Session = Depends(get_db)):
-    """
-    Get statistics about UI element clicks for A/B testing analysis. Includes test group (A/B) analysis since clicks are connected to assignments.
-    
-    Input:
-        db (Session): Database session.
-    
-    Return:
-        dict: Statistics about clicks grouped by element type, position, and test group.
-    """
-    from sqlalchemy import func
-    
-    # Get all clicks with their assignments (join to get test_group)
-    clicks = db.query(UIElementClickDB, ABTestAssignmentDB).join(
-        ABTestAssignmentDB, UIElementClickDB.assignment_id == ABTestAssignmentDB.id
-    ).all()
-    
-    # Group by element_type, element_position, and test_group
-    stats = {}
-    for click, assignment in clicks:
-        # Create key with test group for better analysis
-        key = f"{click.element_type}_{click.element_position or 'unknown'}_{assignment.test_group}"
-        if key not in stats:
-            stats[key] = {
-                'element_type': click.element_type,
-                'element_position': click.element_position or 'unknown',
-                'test_group': assignment.test_group,
-                'total_clicks': 0,
-                'unique_users': set()
+        # Delete existing recommendations for this student
+        existing = db.query(RecommendationResultDB).filter(
+            RecommendationResultDB.student_id == request.student_id
+        ).all()
+        for rec in existing:
+            db.delete(rec)
+        db.commit()
+        
+        # Generate new recommendations
+        recommendations = generate_recommendations_for_student(
+            engine=engine,
+            student_id=request.student_id,
+            time_preference=request.time_preference,
+            current_year=request.year,
+            current_semester=request.semester
+        )
+        
+        if not recommendations:
+            return {
+                "message": f"No recommendations generated for student {request.student_id}",
+                "count": 0
             }
-        stats[key]['total_clicks'] += click.click_count
-        stats[key]['unique_users'].add(click.student_id)
-    
-    # Convert sets to counts
-    result = []
-    for key, data in stats.items():
-        result.append({
-            'element_type': data['element_type'],
-            'element_position': data['element_position'],
-            'test_group': data['test_group'],
-            'total_clicks': data['total_clicks'],
-            'unique_users': len(data['unique_users'])
-        })
-    
-    # Also get summary by test group
-    group_a_clicks = sum(c.click_count for c, a in clicks if a.test_group == 'A')
-    group_b_clicks = sum(c.click_count for c, a in clicks if a.test_group == 'B')
-    
-    return {
-        'total_clicks': sum(c.click_count for c, _ in clicks),
-        'total_records': len(clicks),
-        'by_test_group': {
-            'group_a': group_a_clicks,
-            'group_b': group_b_clicks
-        },
-        'by_element': result
-    }
+        
+        # Save recommendations to database
+        saved_count = 0
+        
+        for slot_num, rec in enumerate(recommendations, 1):
+            # Get time_slot_id from section
+            section_id = int(rec['section_id'])
+            section = db.query(SectionDB).filter(SectionDB.id == section_id).first()
+            time_slot_id = section.time_slot_id if section else None
+            
+            # Convert why_recommended list to string
+            why_recommended_str = ', '.join(rec.get('why_recommended', []))
+            
+            result_data = {
+                'student_id': request.student_id,
+                'course_id': int(rec['course_id']),
+                'recommended_section_id': int(rec['section_id']),
+                'course_name': rec['course_name'],
+                'cluster': rec.get('cluster', ''),
+                'credits': int(rec.get('credits', 0)),
+                'time_slot': int(time_slot_id) if time_slot_id is not None else None,
+                'recommendation_score': str(rec.get('score', '1.0')),
+                'why_recommended': why_recommended_str,
+                'slot_number': slot_num,
+                'model_version': 'semester_scheduler_v1',
+                'time_preference': request.time_preference,
+                'semester': request.semester,
+                'year': request.year
+            }
+            
+            db_recommendation = RecommendationResultDB(**result_data)
+            db.add(db_recommendation)
+            saved_count += 1
+        
+        db.commit()
+        
+        return {
+            "message": f"Successfully generated {saved_count} recommendations for student {request.student_id}",
+            "count": saved_count,
+            "time_preference": request.time_preference
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
 
 # DRAFT SCHEDULE ENDPOINTS
 
@@ -2242,3 +2196,542 @@ async def delete_draft_schedule(
     db.commit()
     
     return {"message": "Draft schedule deleted successfully"}
+
+
+# STATISTICS ENDPOINTS
+
+# Grade to GPA mapping
+GRADE_TO_GPA = {
+    "A": 4.0,
+    "A-": 3.7,
+    "B+": 3.3,
+    "B": 3.0,
+    "B-": 2.7,
+    "C+": 2.3,
+    "C": 2.0,
+    "C-": 1.7,
+    "D+": 1.3,
+    "D": 1.0,
+    "F": 0.0
+}
+
+class GPAProgressPoint(BaseModel):
+    term: str  # e.g., "2022-Fall"
+    year: int
+    semester: str
+    gpa: float
+
+class CreditsProgress(BaseModel):
+    credit_earned: int
+    total_credits: int
+    remaining: int
+
+class SemesterProgress(BaseModel):
+    percentage: float
+    days_passed: int
+    days_total: int
+
+class CourseCompletionByProgram(BaseModel):
+    program: str
+    taken: int
+    remaining: int
+    total: int
+
+class GradeDistribution(BaseModel):
+    grade: str
+    count: int
+    percentage: float
+
+class PerformanceByCourseType(BaseModel):
+    course_type: str
+    average_gpa: float
+    course_count: int
+
+class CreditAccumulation(BaseModel):
+    term: str
+    year: int
+    semester: str
+    credits_earned: int
+    cumulative_credits: int
+
+class TimeSlotPerformance(BaseModel):
+    time_slot: str  # "morning", "afternoon", "evening"
+    average_gpa: float
+    course_count: int
+
+class CourseLoad(BaseModel):
+    term: str
+    year: int
+    semester: str
+    credits: int
+
+class GradeTrendByCourseType(BaseModel):
+    term: str
+    year: int
+    semester: str
+    course_type: str
+    gpa: float
+
+class PrerequisiteStatus(BaseModel):
+    course_id: int
+    course_name: str
+    prerequisites_completed: int
+    prerequisites_total: int
+    completion_percentage: float
+
+class CourseDifficultyPerformance(BaseModel):
+    course_id: int
+    course_name: str
+    credits: int
+    grade: str
+    gpa_value: float
+
+class SemesterPerformanceHeatmap(BaseModel):
+    day_of_week: str  # "Monday", "Tuesday", etc.
+    time_slot: str  # "morning", "afternoon", "evening"
+    average_gpa: float
+    course_count: int
+
+class StatisticsResponse(BaseModel):
+    gpa_progress: List[GPAProgressPoint]
+    credits_progress: CreditsProgress
+    semester_progress: SemesterProgress
+    course_completion: List[CourseCompletionByProgram]
+    grade_distribution: List[GradeDistribution]
+    performance_by_course_type: List[PerformanceByCourseType]
+    credit_accumulation: List[CreditAccumulation]
+    time_slot_performance: List[TimeSlotPerformance]
+    course_load: List[CourseLoad]
+    grade_trends_by_course_type: List[GradeTrendByCourseType]
+    prerequisites_status: List[PrerequisiteStatus]
+    course_difficulty_performance: List[CourseDifficultyPerformance]
+    semester_performance_heatmap: List[SemesterPerformanceHeatmap]
+
+@app.get("/statistics/{student_id}", response_model=StatisticsResponse)
+async def get_student_statistics(
+    student_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get comprehensive statistics for a student including:
+    - GPA progress over time
+    - Credits earned and remaining
+    - Semester progress
+    - Course completion by program
+    - Grade distribution
+    - Performance by course type
+    - Time slot performance
+    - Course load per semester
+    - Prerequisites completion status
+    
+    Input:
+        student_id (int): The student ID to get statistics for.
+        db (Session): Database session.
+    
+    Return:
+        StatisticsResponse: All statistics for the student.
+    
+    Raises:
+        HTTPException: If student not found or database error occurs.
+    """
+    try:
+        # Input validation
+        if student_id <= 0:
+            raise HTTPException(status_code=400, detail="Invalid student_id")
+        
+        # Verify student exists
+        student = db.query(StudentDB).filter(StudentDB.student_id == student_id).first()
+        if student is None:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        # Pre-load all data to avoid N+1 queries
+        # Load all takes with related data in one query
+        takes_query = db.query(
+            TakesDB,
+            SectionDB,
+            TimeSlotDB,
+            CourseDB
+        ).join(
+            SectionDB, TakesDB.section_id == SectionDB.id
+        ).join(
+            TimeSlotDB, SectionDB.time_slot_id == TimeSlotDB.time_slot_id
+        ).join(
+            CourseDB, SectionDB.course_id == CourseDB.id
+        ).filter(
+            TakesDB.student_id == student_id
+        )
+        
+        # Pre-load course type mappings to avoid N+1 queries
+        all_has_courses = db.query(HasCourseDB).all()
+        course_type_map = {}
+        for has_course in all_has_courses:
+            if has_course.courseid not in course_type_map:
+                course_type_map[has_course.courseid] = []
+            course_type_map[has_course.courseid].append(has_course.prog_name)
+        
+        # Load all takes data into memory once
+        all_takes_data = takes_query.all()
+        
+        # 1. GPA Progress over time
+        gpa_data = []
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                gpa_value = GRADE_TO_GPA[takes.grade]
+                term = f"{time_slot.year}-{time_slot.semester}"
+                gpa_data.append({
+                    "term": term,
+                    "year": time_slot.year,
+                    "semester": time_slot.semester,
+                    "gpa": gpa_value
+                })
+        
+        # Calculate average GPA per term
+        term_gpa = {}
+        for item in gpa_data:
+            term = item["term"]
+            if term not in term_gpa:
+                term_gpa[term] = {"gpas": [], "year": item["year"], "semester": item["semester"]}
+            term_gpa[term]["gpas"].append(item["gpa"])
+        
+        gpa_progress = []
+        for term, data in sorted(term_gpa.items()):
+            avg_gpa = sum(data["gpas"]) / len(data["gpas"])
+            gpa_progress.append(GPAProgressPoint(
+                term=term,
+                year=data["year"],
+                semester=data["semester"],
+                gpa=round(avg_gpa, 2)
+            ))
+        
+        # 2. Credits Progress
+        credit_earned = student.credit or 0
+        total_credits = 121  # Standard total credits
+        remaining = max(0, total_credits - credit_earned)
+        
+        credits_progress = CreditsProgress(
+            credit_earned=credit_earned,
+            total_credits=total_credits,
+            remaining=remaining
+        )
+        
+        # 3. Semester Progress
+        today = date.today()
+        # Assume Fall semester: Sept 1 to Dec 20
+        semester_start = date(today.year, 9, 1)
+        semester_end = date(today.year, 12, 20)
+        
+        # If we're past December, use next year's dates
+        if today > semester_end:
+            semester_start = date(today.year + 1, 9, 1)
+            semester_end = date(today.year + 1, 12, 20)
+        
+        days_total = (semester_end - semester_start).days
+        days_passed = max(0, min(days_total, (today - semester_start).days))
+        percentage = round((days_passed / days_total * 100), 1) if days_total > 0 else 0
+        
+        semester_progress = SemesterProgress(
+            percentage=percentage,
+            days_passed=days_passed,
+            days_total=days_total
+        )
+        
+        # 4. Course Completion by Program
+        # Get courses student has taken (with completed status) - use pre-loaded data
+        student_course_ids = set()
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.status == "completed":
+                student_course_ids.add(section.course_id)
+        
+        # Get total courses per program - use pre-loaded map
+        program_stats = {}
+        for course_id, prog_names in course_type_map.items():
+            for prog_name in prog_names:
+                if prog_name not in program_stats:
+                    program_stats[prog_name] = {"total": set(), "taken": 0}
+                program_stats[prog_name]["total"].add(course_id)
+                if course_id in student_course_ids:
+                    program_stats[prog_name]["taken"] += 1
+        
+        course_completion = []
+        for prog_name, stats in program_stats.items():
+            total = len(stats["total"])
+            taken = stats["taken"]
+            remaining = max(0, total - taken)
+            
+            course_completion.append(CourseCompletionByProgram(
+                program=prog_name,
+                taken=taken,
+                remaining=remaining,
+                total=total
+            ))
+        
+        # Sort by program name
+        course_completion.sort(key=lambda x: x.program)
+        
+        # 5. Grade Distribution
+        grade_counts = {}
+        total_grades = 0
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                grade_counts[takes.grade] = grade_counts.get(takes.grade, 0) + 1
+                total_grades += 1
+        
+        grade_distribution = []
+        for grade in ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"]:
+            count = grade_counts.get(grade, 0)
+            percentage = (count / total_grades * 100) if total_grades > 0 else 0
+            grade_distribution.append(GradeDistribution(
+                grade=grade,
+                count=count,
+                percentage=round(percentage, 1)
+            ))
+    
+        # 6. Performance by Course Type
+        # Get course types from pre-loaded map
+        course_type_gpas = {"GENED": [], "BSDS": [], "FND": []}
+        
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                gpa_value = GRADE_TO_GPA[takes.grade]
+                # Get course type from pre-loaded map
+                course_types = course_type_map.get(section.course_id, [])
+                for prog_name in course_types:
+                    if prog_name in course_type_gpas:
+                        course_type_gpas[prog_name].append(gpa_value)
+        
+        performance_by_course_type = []
+        for course_type, gpas in course_type_gpas.items():
+            if gpas:
+                avg_gpa = sum(gpas) / len(gpas)
+                performance_by_course_type.append(PerformanceByCourseType(
+                    course_type=course_type,
+                    average_gpa=round(avg_gpa, 2),
+                    course_count=len(gpas)
+                ))
+        
+        # 7. Credit Accumulation Over Time
+        # Get all completed courses with credits
+        credit_accumulation_data = {}
+        cumulative_credits = 0
+        
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.status == "completed":
+                term = f"{time_slot.year}-{time_slot.semester}"
+                if term not in credit_accumulation_data:
+                    credit_accumulation_data[term] = {
+                        "year": time_slot.year,
+                        "semester": time_slot.semester,
+                        "credits": 0
+                    }
+                credit_accumulation_data[term]["credits"] += course.credits
+        
+        credit_accumulation = []
+        for term in sorted(credit_accumulation_data.keys()):
+            data = credit_accumulation_data[term]
+            cumulative_credits += data["credits"]
+            credit_accumulation.append(CreditAccumulation(
+                term=term,
+                year=data["year"],
+                semester=data["semester"],
+                credits_earned=data["credits"],
+                cumulative_credits=cumulative_credits
+            ))
+        
+        # 8. Time Slot Performance
+        def get_time_slot_category(start_time: str) -> str:
+            """Categorize time slot as morning, afternoon, or evening"""
+            if not start_time:
+                return "unknown"
+            try:
+                # Parse time (format: "HH:MM" or "HH:MM:SS")
+                hour = int(start_time.split(":")[0])
+                if hour < 12:
+                    return "morning"
+                elif hour < 17:
+                    return "afternoon"
+                else:
+                    return "evening"
+            except:
+                return "unknown"
+        
+        time_slot_performance = {"morning": [], "afternoon": [], "evening": []}
+        
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                gpa_value = GRADE_TO_GPA[takes.grade]
+                time_category = get_time_slot_category(time_slot.start_time)
+                if time_category in time_slot_performance:
+                    time_slot_performance[time_category].append(gpa_value)
+        
+        time_slot_perf_list = []
+        for time_slot, gpas in time_slot_performance.items():
+            if gpas:
+                avg_gpa = sum(gpas) / len(gpas)
+                time_slot_perf_list.append(TimeSlotPerformance(
+                    time_slot=time_slot,
+                    average_gpa=round(avg_gpa, 2),
+                    course_count=len(gpas)
+                ))
+        
+        # 9. Course Load Per Semester
+        course_load_data = {}
+        for takes, section, time_slot, course in all_takes_data:
+            term = f"{time_slot.year}-{time_slot.semester}"
+            if term not in course_load_data:
+                course_load_data[term] = {
+                    "year": time_slot.year,
+                    "semester": time_slot.semester,
+                    "credits": 0
+                }
+            course_load_data[term]["credits"] += course.credits
+        
+        course_load = []
+        for term in sorted(course_load_data.keys()):
+            data = course_load_data[term]
+            course_load.append(CourseLoad(
+                term=term,
+                year=data["year"],
+                semester=data["semester"],
+                credits=data["credits"]
+            ))
+        
+        # 10. Grade Trends by Course Type
+        grade_trends = {}
+        
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                gpa_value = GRADE_TO_GPA[takes.grade]
+                term = f"{time_slot.year}-{time_slot.semester}"
+                # Get course type from pre-loaded map
+                course_types = course_type_map.get(section.course_id, [])
+                for course_type in course_types:
+                    if course_type in ["GENED", "BSDS", "FND"]:
+                        key = f"{term}-{course_type}"
+                        if key not in grade_trends:
+                            grade_trends[key] = {
+                                "term": term,
+                                "year": time_slot.year,
+                                "semester": time_slot.semester,
+                                "course_type": course_type,
+                                "gpas": []
+                            }
+                        grade_trends[key]["gpas"].append(gpa_value)
+        
+        grade_trends_list = []
+        for key, data in sorted(grade_trends.items()):
+            avg_gpa = sum(data["gpas"]) / len(data["gpas"])
+            grade_trends_list.append(GradeTrendByCourseType(
+                term=data["term"],
+                year=data["year"],
+                semester=data["semester"],
+                course_type=data["course_type"],
+                gpa=round(avg_gpa, 2)
+            ))
+        
+        # 11. Prerequisites Completion Status
+        # Get all courses student hasn't taken yet
+        all_courses = db.query(CourseDB).all()
+        # student_course_ids already computed above
+        
+        prerequisites_status = []
+        for course in all_courses:
+            if course.id not in student_course_ids:
+                # Get prerequisites for this course
+                prereqs = db.query(PrerequisitesDB).filter(
+                    PrerequisitesDB.course_id == course.id
+                ).all()
+                
+                if prereqs:
+                    total_prereqs = len(prereqs)
+                    completed_prereqs = sum(1 for prereq in prereqs if prereq.prerequisite_id in student_course_ids)
+                    completion_pct = (completed_prereqs / total_prereqs * 100) if total_prereqs > 0 else 0
+                    
+                    prerequisites_status.append(PrerequisiteStatus(
+                        course_id=course.id,
+                        course_name=course.name,
+                        prerequisites_completed=completed_prereqs,
+                        prerequisites_total=total_prereqs,
+                        completion_percentage=round(completion_pct, 1)
+                    ))
+        
+        # Sort by completion percentage (highest first)
+        prerequisites_status.sort(key=lambda x: x.completion_percentage, reverse=True)
+        # Limit to top 20 to avoid overwhelming the UI
+        prerequisites_status = prerequisites_status[:20]
+    
+        # 12. Course Difficulty vs Performance
+        course_difficulty = []
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                course_difficulty.append(CourseDifficultyPerformance(
+                    course_id=course.id,
+                    course_name=course.name,
+                    credits=course.credits,
+                    grade=takes.grade,
+                    gpa_value=GRADE_TO_GPA[takes.grade]
+                ))
+    
+        # 13. Semester Performance Heatmap
+        heatmap_data = {}
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        
+        for takes, section, time_slot, course in all_takes_data:
+            if takes.grade and takes.grade in GRADE_TO_GPA:
+                gpa_value = GRADE_TO_GPA[takes.grade]
+                day = time_slot.day_of_week
+                # Map day abbreviations to full names
+                day_map = {"Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", 
+                          "Thu": "Thursday", "Fri": "Friday", "Sat": "Saturday", "Sun": "Sunday"}
+                day_full = day_map.get(day, day)
+                time_category = get_time_slot_category(time_slot.start_time)
+                
+                key = f"{day_full}-{time_category}"
+                if key not in heatmap_data:
+                    heatmap_data[key] = {
+                        "day_of_week": day_full,
+                        "time_slot": time_category,
+                        "gpas": [],
+                        "count": 0
+                    }
+                heatmap_data[key]["gpas"].append(gpa_value)
+                heatmap_data[key]["count"] += 1
+        
+        semester_heatmap = []
+        for key, data in heatmap_data.items():
+            if data["gpas"]:
+                avg_gpa = sum(data["gpas"]) / len(data["gpas"])
+                semester_heatmap.append(SemesterPerformanceHeatmap(
+                    day_of_week=data["day_of_week"],
+                    time_slot=data["time_slot"],
+                    average_gpa=round(avg_gpa, 2),
+                    course_count=data["count"]
+                ))
+        
+        return StatisticsResponse(
+            gpa_progress=gpa_progress,
+            credits_progress=credits_progress,
+            semester_progress=semester_progress,
+            course_completion=course_completion,
+            grade_distribution=grade_distribution,
+            performance_by_course_type=performance_by_course_type,
+            credit_accumulation=credit_accumulation,
+            time_slot_performance=time_slot_perf_list,
+            course_load=course_load,
+            grade_trends_by_course_type=grade_trends_list,
+            prerequisites_status=prerequisites_status,
+            course_difficulty_performance=course_difficulty,
+            semester_performance_heatmap=semester_heatmap
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404)
+        raise
+    except Exception as e:
+        # Log the error and return 500
+        import traceback
+        print(f"Error in get_student_statistics: {str(e)}")
+        print(traceback.format_exc())
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error while calculating statistics: {str(e)}"
+        )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, BookOpen, Calendar, BarChart3, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -14,6 +14,14 @@ export default function Dashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activePage, setActivePage] = useState<Page>('about')
+  const [renderKey, setRenderKey] = useState(0)
+
+  // Force re-render when user changes to ensure all child components update
+  // This is especially important after login when user state is set
+  useEffect(() => {
+    // Increment render key when user changes to force all child components to remount
+    setRenderKey(prev => prev + 1)
+  }, [user])
 
   const handleLogout = () => {
     logout()
@@ -28,17 +36,22 @@ export default function Dashboard() {
   ]
 
   const renderPage = () => {
+    // Use renderKey to force remount when user changes
+    const componentKey = `${user?.student_id || 'no-user'}-${renderKey}`
+    
     switch (activePage) {
       case 'about':
-        return <AboutMe />
+        // Key ensures AboutMe re-renders when user changes (e.g., after login)
+        return <AboutMe key={componentKey} />
       case 'classes':
-        return <Classes />
+        return <Classes key={componentKey} />
       case 'schedule':
-        return <Schedule />
+        // Key ensures Schedule re-renders when user changes (e.g., after login)
+        return <Schedule key={componentKey} />
       case 'statistics':
-        return <Statistics />
+        return <Statistics key={componentKey} />
       default:
-        return <AboutMe />
+        return <AboutMe key={componentKey} />
     }
   }
 

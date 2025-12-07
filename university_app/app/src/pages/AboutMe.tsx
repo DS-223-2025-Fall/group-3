@@ -1,8 +1,31 @@
+import { useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { User } from 'lucide-react'
 
+// Helper function to calculate student standing based on credits
+function getStudentStanding(credits: number | undefined): string {
+  if (credits === undefined || credits === null) {
+    return 'N/A'
+  }
+  if (credits < 30) {
+    return 'Freshman'
+  } else if (credits < 60) {
+    return 'Sophomore'
+  } else if (credits < 90) {
+    return 'Junior'
+  } else {
+    return 'Senior'
+  }
+}
+
 export default function AboutMe() {
   const { user } = useAuth()
+  const standing = getStudentStanding(user?.credit)
+
+  // Force re-render when user changes
+  useEffect(() => {
+    // This ensures the component updates when user state changes
+  }, [user])
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -51,6 +74,13 @@ export default function AboutMe() {
             <div className="bg-gray-50 rounded-lg p-6">
               <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Credits</h3>
               <p className="text-xl text-[#1e3a5f]">{user.credit || 0}</p>
+            </div>
+          )}
+
+          {user?.credit !== undefined && (
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Standing</h3>
+              <p className="text-xl text-[#1e3a5f] font-semibold">{standing}</p>
             </div>
           )}
         </div>

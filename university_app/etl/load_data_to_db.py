@@ -16,14 +16,37 @@ Prerequisites:
 import pandas as pd
 from loguru import logger
 import os
+import sys
 from sqlalchemy import text, inspect
 from Database.database import engine, get_db
 from Database.models import (
     User, Student, Location, Instructor, Department, Program, Course,
     TimeSlot, Section, SectionName, Prerequisites, Takes, Works, HasCourse,
-    Cluster, CourseCluster, Preferred,
+    Cluster, CourseCluster, Preferred, RecommendationResult,
     create_tables
 )
+
+# Add shared module to path for recommendation generation
+# Try multiple paths: Docker mount (/shared) and local development (../shared)
+shared_paths = [
+    '/shared',  # Docker mount
+    os.path.join(os.path.dirname(__file__), '..', 'shared'),  # Local development
+]
+
+shared_found = False
+for path in shared_paths:
+    if os.path.exists(path) and os.path.exists(os.path.join(path, '__init__.py')):
+        sys.path.insert(0, os.path.dirname(path) if path != '/shared' else '/')
+        shared_found = True
+        break
+
+try:
+    from recommender_helpers import generate_recommendations_for_student
+    RECOMMENDER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Shared recommender module not available: {e}")
+    logger.warning("Recommendations will not be auto-generated, but students can still generate them via the frontend.")
+    RECOMMENDER_AVAILABLE = False
 
 # Mapping of CSV table names to SQLAlchemy models
 TABLE_MODELS = {
@@ -222,20 +245,6 @@ def main():
         except Exception as e:
             logger.debug(f"Could not clear recommendation_results (may not exist): {e}")
         
-        try:
-            # Clear ab_test_assignments if it exists
-            db.execute(text("DELETE FROM ab_test_assignments"))
-            logger.info("Cleared ab_test_assignments table")
-        except Exception as e:
-            logger.debug(f"Could not clear ab_test_assignments (may not exist): {e}")
-        
-        try:
-            # Clear ui_element_clicks if it exists
-            db.execute(text("DELETE FROM ui_element_clicks"))
-            logger.info("Cleared ui_element_clicks table")
-        except Exception as e:
-            logger.debug(f"Could not clear ui_element_clicks (may not exist): {e}")
-        
         db.commit()
         
         # Now clear all ETL tables in reverse dependency order to avoid foreign key constraints
@@ -403,6 +412,18 @@ def main():
             logger.info(f"\n{'=' * 60}")
             logger.info(f"✅ SUCCESS: All tables loaded successfully!")
             logger.info(f"{'=' * 60}")
+            
+            # Automatically generate recommendations for all students
+            logger.info(f"\n{'=' * 60}")
+            logger.info(f"Generating recommendations for all students...")
+            logger.info(f"{'=' * 60}")
+            try:
+                generate_recommendations_for_all_students(db)
+                logger.info(f"✅ Recommendations generated successfully!")
+            except Exception as e:
+                logger.warning(f"⚠️  Could not generate recommendations: {e}")
+                logger.warning(f"   Students can still generate recommendations via the frontend")
+                # Don't fail the ETL process if recommendations fail
 
     except Exception as e:
         logger.error(f"Error during data loading: {e}")
@@ -413,6 +434,86 @@ def main():
         raise
     finally:
         db.close()
+
+
+def generate_recommendations_for_all_students(db_session):
+    """
+    Generate recommendations for all students in the database.
+    Uses default 'any' time preference.
+    """
+    if not RECOMMENDER_AVAILABLE:
+        logger.warning("Recommender not available, skipping recommendation generation")
+        return
+    
+    try:
+        # Get all students
+        students = db_session.query(Student).all()
+        if not students:
+            logger.info("No students found, skipping recommendation generation")
+            return
+        
+        logger.info(f"Generating recommendations for {len(students)} students...")
+        
+        # Generate recommendations for each student
+        total_generated = 0
+        for student in students:
+            try:
+                recommendations = generate_recommendations_for_student(
+                    engine=engine,
+                    student_id=student.student_id,
+                    time_preference='any',  # Default to 'any'
+                    current_year=2025,
+                    current_semester='Fall'
+                )
+                
+                if not recommendations:
+                    logger.debug(f"No recommendations for student {student.student_id}")
+                    continue
+                
+                # Save recommendations to database
+                for slot_num, rec in enumerate(recommendations, 1):
+                    # Get time_slot_id from section
+                    section = db_session.query(Section).filter(Section.id == int(rec['section_id'])).first()
+                    time_slot_id = section.time_slot_id if section else None
+                    
+                    # Convert why_recommended list to string
+                    why_recommended_str = ', '.join(rec.get('why_recommended', []))
+                    
+                    result_data = {
+                        'student_id': student.student_id,
+                        'course_id': int(rec['course_id']),
+                        'recommended_section_id': int(rec['section_id']),
+                        'course_name': rec['course_name'],
+                        'cluster': rec.get('cluster', ''),
+                        'credits': int(rec.get('credits', 0)),
+                        'time_slot': int(time_slot_id) if time_slot_id is not None else None,
+                        'recommendation_score': str(rec.get('score', '1.0')),
+                        'why_recommended': why_recommended_str,
+                        'slot_number': slot_num,
+                        'model_version': 'semester_scheduler_v1',
+                        'time_preference': 'any',
+                        'semester': 'Fall',
+                        'year': 2025
+                    }
+                    
+                    recommendation = RecommendationResult(**result_data)
+                    db_session.add(recommendation)
+                    total_generated += 1
+                
+                # Commit after each student to avoid large transactions
+                db_session.commit()
+                
+            except Exception as e:
+                logger.warning(f"Failed to generate recommendations for student {student.student_id}: {e}")
+                db_session.rollback()
+                continue
+        
+        logger.info(f"✅ Generated {total_generated} recommendations for {len(students)} students")
+        
+    except Exception as e:
+        logger.error(f"Error generating recommendations: {e}")
+        db_session.rollback()
+        raise
 
 
 if __name__ == "__main__":
