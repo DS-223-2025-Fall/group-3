@@ -90,6 +90,7 @@ services:
     volumes:
       - ./notebook:/notebook
       - ./etl:/etl
+      - ./shared:/shared
     <<: [*database-env, *db-dependency]
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.connect((\"localhost\", 8888)); s.close()' || exit 1"]

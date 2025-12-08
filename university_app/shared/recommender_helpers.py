@@ -3,23 +3,30 @@ Helper functions for loading data and generating recommendations
 """
 
 import pandas as pd
+import os
 from typing import Dict
+from datetime import datetime
 from .semester_scheduler import SemesterScheduler
 
 
-def load_data_from_db(engine, current_year: int = 2025, current_semester: str = 'Fall') -> Dict:
+def load_data_from_db(engine, current_year: int = None, current_semester: str = None) -> Dict:
     """
     Description:
         Load all necessary data from database into pandas DataFrames.
     
     Input:
         engine: SQLAlchemy engine
-        current_year (int): Current academic year
-        current_semester (str): Current semester ('Fall', 'Spring', 'Summer')
+        current_year (int, optional): Current academic year. Defaults to CURRENT_YEAR env var or current year.
+        current_semester (str, optional): Current semester ('Fall', 'Spring', 'Summer'). Defaults to DEFAULT_SEMESTER env var or 'Fall'.
     
     Output:
         Dict: Dictionary of DataFrames with keys: students, courses, sections, etc.
     """
+    # Use defaults from environment or datetime if not provided
+    if current_year is None:
+        current_year = int(os.environ.get('CURRENT_YEAR', datetime.now().year))
+    if current_semester is None:
+        current_semester = os.environ.get('DEFAULT_SEMESTER', 'Fall')
     data = {}
     
     # Load required tables
@@ -55,8 +62,8 @@ def generate_recommendations_for_student(
     engine,
     student_id: int,
     time_preference: str = 'any',
-    current_year: int = 2025,
-    current_semester: str = 'Fall'
+    current_year: int = None,
+    current_semester: str = None
 ) -> list:
     """
     Description:
@@ -66,13 +73,13 @@ def generate_recommendations_for_student(
         engine: SQLAlchemy engine
         student_id (int): Student ID to generate recommendations for
         time_preference (str): Time preference ('morning', 'afternoon', 'evening', 'any')
-        current_year (int): Current academic year
-        current_semester (str): Current semester
+        current_year (int, optional): Current academic year. Defaults to CURRENT_YEAR env var or current year.
+        current_semester (str, optional): Current semester. Defaults to DEFAULT_SEMESTER env var or 'Fall'.
     
     Output:
         list: List of recommendation dictionaries
     """
-    # Load data
+    # Load data (will use defaults from environment if not provided)
     data = load_data_from_db(engine, current_year, current_semester)
     
     # Initialize scheduler

@@ -16,6 +16,18 @@ export default function CourseTable({
   onClusterFilter,
   showCluster,
 }: CourseTableProps) {
+  // Helper function to remove course code from the beginning of course name
+  const cleanCourseName = (name: string, code: string): string => {
+    if (!name || !code) return name
+    // Remove the code and any following space from the start of the name
+    const codePrefix = code.trim()
+    if (name.startsWith(codePrefix)) {
+      // Remove code and the space after it
+      const cleaned = name.substring(codePrefix.length).trim()
+      return cleaned || name // Return original if nothing left after cleaning
+    }
+    return name
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -93,7 +105,7 @@ export default function CourseTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm font-medium">{course.code}</td>
-                <td className="px-4 py-3 text-sm">{course.name}</td>
+                <td className="px-4 py-3 text-sm">{cleanCourseName(course.name, course.code)}</td>
                 {showCluster && (
                   <td className="px-4 py-3">
                     <div className="flex gap-2 flex-wrap">

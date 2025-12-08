@@ -12,10 +12,10 @@ import time
 
 
 # Load environment variables from .env file
-# Try multiple locations for .env file (in case running locally)
-load_dotenv("/notebook/.env")
-load_dotenv("/notebook/../.env")  # Parent directory
-load_dotenv()  # Current directory
+# Try multiple locations: Docker mount, parent directory, current directory
+load_dotenv("/notebook/.env")     # Docker mount location
+load_dotenv("../.env")            # Parent directory (for local dev)
+load_dotenv()                     # Current directory
 
 # Get the database URL from environment variables
 # Docker-compose will pass this as an environment variable
@@ -27,9 +27,11 @@ if not DATABASE_URL:
 # Create the SQLAlchemy engine with connection pooling
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_recycle=3600,   # Recycle connections after 1 hour
-    echo=False           # Set to True for SQL query logging
+    pool_pre_ping=True,      # Verify connections before using them
+    pool_recycle=3600,       # Recycle connections after 1 hour
+    pool_size=10,            # Connection pool size
+    max_overflow=20,         # Max overflow connections
+    echo=False               # Set to True for SQL query logging
 )
 
 # Base class for declarative models (must be defined before importing models)
@@ -39,10 +41,34 @@ Base = declarative_base()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+def reflect_referenced_tables():
+    """
+    Reflect tables that are referenced by foreign keys but not defined as models.
+    This ensures SQLAlchemy can validate foreign key relationships.
+    Should be called after importing models.
+    """
+    # Tables that are referenced by foreign keys but not defined in notebook models
+    tables_to_reflect = ['time_slots', 'students', 'courses', 'sections']
+    
+    try:
+        inspector = inspect(engine)
+        existing_tables = inspector.get_table_names()
+        
+        # Only reflect tables that exist and aren't already in metadata
+        for table_name in tables_to_reflect:
+            if table_name in existing_tables and table_name not in Base.metadata.tables:
+                Base.metadata.reflect(bind=engine, only=[table_name])
+    except Exception as e:
+        # If reflection fails, continue anyway
+        pass
+
+
 def get_db_session():
     """
     Function to get a database session.
     Returns a database session (caller should close it).
+    
+    DEPRECATED: Use get_db() generator pattern instead for automatic cleanup.
     
     Example:
         db = get_db_session()
@@ -53,6 +79,30 @@ def get_db_session():
             db.close()
     """
     return SessionLocal()
+
+
+def get_db():
+    """
+    Description:
+        Get a database session for dependency injection. Yields a database session and ensures it's closed after use.
+        This is the recommended pattern for session management.
+    
+    Input:
+        None
+    
+    Output:
+        Generator[Session]: Database session generator that yields a session
+    
+    Example:
+        for db in get_db():
+            students = db.query(Student).all()
+            break  # Generator will close session automatically
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def check_db_connection(max_retries=5, retry_delay=2):

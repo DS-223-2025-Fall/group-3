@@ -39,3 +39,41 @@ Full-stack application for managing university courses, students, and schedules.
      # Build static documentation site
      cd mkdocs && python3 -m mkdocs build
      ```
+
+## Screenshots
+
+### Frontend UI
+
+#### About Me Page
+![About Me](images/About_Me.png)
+
+#### Classes/Courses Page
+![Classes](images/Classes.png)
+
+#### Schedule Page
+![Schedule](images/Schedule.png)
+
+#### Statistics Page
+![Statistics](images/Statistics.png)
+
+### API Documentation (Swagger)
+
+**Interactive API Documentation:** [http://localhost:8008/docs](http://localhost:8008/docs)
+
+*Access the full interactive Swagger UI documentation to explore all API endpoints, test requests, and view detailed schemas.*
+
+#### Swagger UI - Endpoint Groups
+![Swagger Endpoint Groups](images/Swagger_1_Endpoint_Groups.png)
+
+*The main Swagger UI page showing all API endpoints organized by tags (Authentication, Students, Courses, Recommendations, etc.). This provides an overview of all available endpoints grouped by functionality.*
+
+#### Expanded Endpoint Example
+![Swagger Expanded Endpoint](images/Swagger_2_Expanded_endpoint_look.png)
+
+*An example of an expanded endpoint showing the detailed request/response schemas, parameters, and data models. This demonstrates the comprehensive API documentation available for each endpoint.*
+
+#### Try It Out Feature
+![Swagger Try It Out](images/Swagger_3_Try_It_Out.png)
+
+*The interactive "Try it out" feature allows developers to test API endpoints directly from the Swagger UI.*
+

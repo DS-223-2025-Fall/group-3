@@ -4,6 +4,8 @@ Shared module for generating course recommendations
 """
 
 import pandas as pd
+import os
+from datetime import datetime
 
 class SemesterScheduler:
     """
@@ -15,10 +17,18 @@ class SemesterScheduler:
     - Time-of-day preferences
     """
     
-    def __init__(self, data_dict, current_year=2024, current_semester='Fall'):
+    def __init__(self, data_dict, current_year=None, current_semester=None):
         self.data = data_dict
+        # Use current year from datetime if not provided, or from environment variable
+        if current_year is None:
+            current_year = int(os.environ.get('CURRENT_YEAR', datetime.now().year))
         self.current_year = current_year
+        
+        # Use default semester from environment variable if not provided
+        if current_semester is None:
+            current_semester = os.environ.get('DEFAULT_SEMESTER', 'Fall')
         self.current_semester = current_semester
+        
         # Calculate next semester for recommendations
         self.next_semester, self.next_year = self._get_next_semester(current_semester, current_year)
         
@@ -329,7 +339,6 @@ class SemesterScheduler:
             return sections_df
         
         filtered_sections = []
-        debug_info = []
         
         for _, section in sections_df.iterrows():
             section_id = int(section['id'])
@@ -344,36 +353,21 @@ class SemesterScheduler:
                         # Parse time (format: HH:MM:SS)
                         hour = int(start_time.split(':')[0])
                         
-                        matches = False
+                        # Check time preference match
                         if time_preference == 'morning' and 8 <= hour < 12:
-                            matches = True
                             filtered_sections.append(section)
                         elif time_preference == 'afternoon' and 12 <= hour < 17:
-                            matches = True
                             filtered_sections.append(section)
                         elif time_preference == 'evening' and (17 <= hour or hour < 8):
-                            matches = True
                             filtered_sections.append(section)
-                        
-                        if not matches:
-                            debug_info.append(f"Section {section_id}: hour={hour}, time={start_time}, pref={time_preference} - NO MATCH")
-                    except Exception as e:
-                        # If parsing fails, include the section
-                        debug_info.append(f"Section {section_id}: parse error - {e}")
+                    except Exception:
+                        # If parsing fails, include the section (assume it matches)
                         filtered_sections.append(section)
             else:
                 # If no time info and time_preference is 'any', include the section
                 # Otherwise, exclude sections without time info when filtering by specific time preference
                 if time_preference == 'any':
                     filtered_sections.append(section)
-                else:
-                    debug_info.append(f"Section {section_id}: no timeslot info")
-                # If time_preference is specific (morning/afternoon/evening) and no time info, exclude it
-        
-        if time_preference == 'evening' and len(debug_info) > 0 and len(filtered_sections) == 0:
-            print(f"⚠️ Evening filter debug (input: {len(sections_df)} sections):")
-            for info in debug_info[:5]:  # Show first 5
-                print(f"  {info}")
         
         if filtered_sections:
             return pd.DataFrame(filtered_sections)
@@ -405,6 +399,40 @@ class SemesterScheduler:
                 eligible.append(course_id)
         
         return eligible
+    
+    def _filter_sections_with_fallbacks(self, sections, time_preference):
+        """
+        Description:
+            Filter sections by semester and time preference with multiple fallback strategies.
+            This is a helper method to reduce code duplication.
+        
+        Input:
+            sections: DataFrame of sections to filter
+            time_preference: Time preference ('morning', 'afternoon', 'evening', 'any')
+        
+        Output:
+            DataFrame: Filtered sections DataFrame
+        """
+        if len(sections) == 0:
+            return sections.copy()
+        
+        # Try strict filtering first (next semester + time preference)
+        sections_filtered = self.filter_by_semester_availability(sections.copy())
+        sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
+        
+        # If no sections match both semester AND time preference, try just time preference
+        if len(sections_filtered) == 0 and time_preference != 'any':
+            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
+        
+        # Final fallback: if time_preference is 'any', try with just semester
+        if len(sections_filtered) == 0 and time_preference == 'any':
+            sections_filtered = self.filter_by_semester_availability(sections.copy())
+        
+        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
+        if len(sections_filtered) == 0 and time_preference == 'any':
+            sections_filtered = sections.copy()
+        
+        return sections_filtered
     
     def filter_by_semester_availability(self, sections_df, use_next_semester=True):
         """
@@ -463,9 +491,8 @@ class SemesterScheduler:
             int: Semester number (1-8) corresponding to BSDS schedule template
         """
         credits = self.get_student_credits(student_id)
-        standing = self.get_student_standing(student_id)
         
-        # Map credits/standing to semester
+        # Map credits to semester
         if credits < 15:
             return 1  # Fall 1
         elif credits < 30:
@@ -552,23 +579,8 @@ class SemesterScheduler:
         if len(sections) == 0:
             return None
         
-        # Try strict filtering first (semester + time preference)
-        sections_filtered = self.filter_by_semester_availability(sections.copy())
-        sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
-        
-        # If no sections match both semester AND time preference, try just time preference
-        # This allows us to recommend courses in the time range even if they're not in next semester
-        if len(sections_filtered) == 0 and time_preference != 'any':
-            # Fallback: try filtering by time preference only (ignore semester)
-            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
-        
-        # Final fallback: if time_preference is 'any', try with just semester
-        if len(sections_filtered) == 0 and time_preference == 'any':
-            sections_filtered = self.filter_by_semester_availability(sections.copy())
-        
-        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
-        if len(sections_filtered) == 0 and time_preference == 'any':
-            sections_filtered = sections.copy()
+        # Filter sections with fallback strategies
+        sections_filtered = self._filter_sections_with_fallbacks(sections, time_preference)
         
         if len(sections_filtered) == 0:
             return None
@@ -578,17 +590,10 @@ class SemesterScheduler:
         course_id = int(section['course_id'])
         course = self.data['courses'][self.data['courses']['id'] == course_id].iloc[0]
         
-        # Get cluster info
-        clusters = self.course_to_clusters.get(course_id, [])
-        cluster_names = []
-        for cid in clusters:
-            if cid in self.cluster_info:
-                cluster_names.append(self.cluster_info[cid]['description'])
-        
         return {
             'course_id': course_id,
             'course_name': course['name'],
-            'cluster': ', '.join(cluster_names) if cluster_names else 'Gen-Ed',
+            'cluster': self._get_cluster_names(course_id, default='Gen-Ed'),
             'credits': int(course['credits']),
             'section_id': int(section['id']),
             'time_slot': self._get_time_slot_string(int(section['id'])),
@@ -677,23 +682,8 @@ class SemesterScheduler:
         if len(sections) == 0:
             return None
         
-        # Try strict filtering first (next semester + time preference)
-        sections_filtered = self.filter_by_semester_availability(sections.copy())
-        sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
-        
-        # If no sections match both semester AND time preference, try just time preference
-        # This allows us to recommend courses in the time range even if they're not in next semester
-        if len(sections_filtered) == 0 and time_preference != 'any':
-            # Fallback: try filtering by time preference only (ignore semester)
-            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
-        
-        # Final fallback: if time_preference is 'any', try with just semester
-        if len(sections_filtered) == 0 and time_preference == 'any':
-            sections_filtered = self.filter_by_semester_availability(sections.copy())
-        
-        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
-        if len(sections_filtered) == 0 and time_preference == 'any':
-            sections_filtered = sections.copy()
+        # Filter sections with fallback strategies
+        sections_filtered = self._filter_sections_with_fallbacks(sections, time_preference)
         
         if len(sections_filtered) == 0:
             return None
@@ -701,17 +691,10 @@ class SemesterScheduler:
         section = sections_filtered.iloc[0]
         course = self.data['courses'][self.data['courses']['id'] == course_id].iloc[0]
         
-        # Get cluster info
-        clusters = self.course_to_clusters.get(course_id, [])
-        cluster_names = []
-        for cid in clusters:
-            if cid in self.cluster_info:
-                cluster_names.append(self.cluster_info[cid]['description'])
-        
         return {
             'course_id': course_id,
             'course_name': course['name'],
-            'cluster': ', '.join(cluster_names) if cluster_names else 'Core',
+            'cluster': self._get_cluster_names(course_id, default='Core'),
             'credits': int(course['credits']),
             'section_id': int(section['id']),
             'time_slot': self._get_time_slot_string(int(section['id'])),
@@ -756,23 +739,8 @@ class SemesterScheduler:
         if len(sections) == 0:
             return None
         
-        # Try strict filtering first (semester + time preference)
-        sections_filtered = self.filter_by_semester_availability(sections.copy())
-        sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
-        
-        # If no sections match both semester AND time preference, try just time preference
-        # This allows us to recommend courses in the time range even if they're not in next semester
-        if len(sections_filtered) == 0 and time_preference != 'any':
-            # Fallback: try filtering by time preference only (ignore semester)
-            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
-        
-        # Final fallback: if time_preference is 'any', try with just semester
-        if len(sections_filtered) == 0 and time_preference == 'any':
-            sections_filtered = self.filter_by_semester_availability(sections.copy())
-        
-        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
-        if len(sections_filtered) == 0 and time_preference == 'any':
-            sections_filtered = sections.copy()
+        # Filter sections with fallback strategies
+        sections_filtered = self._filter_sections_with_fallbacks(sections, time_preference)
         
         if len(sections_filtered) == 0:
             return None
@@ -816,6 +784,25 @@ class SemesterScheduler:
         ]['course_id'].unique()
         
         return set(enrolled_courses)
+    
+    def _get_cluster_names(self, course_id, default='Core'):
+        """
+        Description:
+            Get cluster names for a course as a comma-separated string.
+        
+        Input:
+            course_id (int): Course ID
+            default (str): Default cluster name if no clusters found
+        
+        Output:
+            str: Comma-separated cluster names or default
+        """
+        clusters = self.course_to_clusters.get(course_id, [])
+        cluster_names = []
+        for cid in clusters:
+            if cid in self.cluster_info:
+                cluster_names.append(self.cluster_info[cid]['description'])
+        return ', '.join(cluster_names) if cluster_names else default
     
     def _get_time_slot_string(self, section_id):
         """

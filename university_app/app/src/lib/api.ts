@@ -270,6 +270,26 @@ export async function fetchStatistics(studentId: number): Promise<Statistics> {
   }
 }
 
+export interface Student {
+  student_id: number
+  student_name: string
+  credit: number | null
+  program_name: string
+}
+
+export async function fetchStudent(studentId: number): Promise<Student> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/students/${studentId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch student')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching student:', error)
+    throw error
+  }
+}
+
 export interface GenerateRecommendationsParams {
   student_id: number
   time_preference: string
