@@ -14,9 +14,8 @@ import os
 
 
 # Load environment variables from .env file
-# Try multiple locations: parent directory (for local dev) and current directory
-load_dotenv("../.env")  # Parent directory (university_app/.env)
-load_dotenv(".env")     # Current directory (for Docker if mounted)
+# Load from parent directory (university_app/.env) - works for both local dev and Docker
+load_dotenv("../.env")
 
 # Get the database URL from environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL")

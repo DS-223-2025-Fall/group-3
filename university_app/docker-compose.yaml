@@ -1,5 +1,14 @@
-services:
+# YAML anchors for reusable configurations
+x-database-env: &database-env
+  environment:
+    - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-university_db}}
 
+x-db-dependency: &db-dependency
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
   db:
     container_name: ${CONTAINER_NAME_DB:-postgresql_db}
     image: postgres:17
@@ -11,13 +20,12 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]  # Healthcheck for PostgreSQL
-        interval: 5s
-        timeout: 5s
-        retries: 5
-        start_period: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
-      # Use named volume for cross-platform compatibility (fixes Windows permission issues)
       - postgres_data:/var/lib/postgresql/data 
             
   pgadmin:  
@@ -27,9 +35,9 @@ services:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
     ports:
-      - 5050:80 # for local browser (80 is the default port of the browsed)
+      - 5050:80
     volumes:
-      - ./pgadmin_data:/var/lib/pgadmin  # Persisting pgAdmin configuration and sessions
+      - ./pgadmin_data:/var/lib/pgadmin
     depends_on: 
       - db
 
@@ -42,12 +50,8 @@ services:
       - 3000:3000
     volumes:
       - ./etl:/etl
-      - ./shared:/shared  # Mount shared module for recommendation generation
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-university_db}}
-    depends_on: 
-      db:
-        condition: service_healthy
+      - ./shared:/shared
+    <<: [*database-env, *db-dependency]
     healthcheck:
       test: "exit 0"
 
@@ -56,20 +60,14 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    # command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn main:app --host 0.0.0.0'
     volumes:
       - ./api:/api
-      - ./shared:/shared  # Mount shared module for recommender
-      - ./etl:/etl  # Mount ETL directory for database initialization
+      - ./shared:/shared
+      - ./etl:/etl
     ports:
       - 8008:8000
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-university_db}}
-    depends_on:
-      db:
-        condition: service_healthy
+    <<: [*database-env, *db-dependency]
 
-  # Frontend service
   app:
     container_name: ${CONTAINER_NAME_APP:-group-3_app}
     build:
@@ -82,7 +80,6 @@ services:
     depends_on:
       - api
 
-  # Data Science Notebook service
   notebook:
     container_name: ${CONTAINER_NAME_NOTEBOOK:-group-3_notebook}
     build:
@@ -93,11 +90,7 @@ services:
     volumes:
       - ./notebook:/notebook
       - ./etl:/etl
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-university_db}}
-    depends_on:
-      db:
-        condition: service_healthy
+    <<: [*database-env, *db-dependency]
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.connect((\"localhost\", 8888)); s.close()' || exit 1"]
       interval: 30s
@@ -105,8 +98,6 @@ services:
       retries: 3
       start_period: 20s
 
-# Named volumes for cross-platform compatibility
 volumes:
   postgres_data:
-    # Named volume ensures consistent permissions across Windows, macOS, and Linux
     driver: local

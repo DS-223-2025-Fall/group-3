@@ -50,18 +50,12 @@ from typing import Optional, List
 # Add shared module to path (works both in Docker and locally)
 # In Docker: shared is mounted at /shared
 # Locally: shared is at ../shared relative to api/
-api_dir = os.path.dirname(__file__)
-parent_dir = os.path.dirname(api_dir)
-
-# Try Docker path first (/shared)
 if os.path.exists('/shared'):
     sys.path.insert(0, '/')
-# Try local development path
-elif os.path.exists(os.path.join(parent_dir, 'shared')):
-    sys.path.insert(0, parent_dir)
-# Fallback: try current directory structure
 else:
-    sys.path.insert(0, os.path.dirname(parent_dir) if os.path.basename(parent_dir) == 'university_app' else parent_dir)
+    parent_dir = os.path.dirname(os.path.dirname(__file__))
+    if os.path.exists(os.path.join(parent_dir, 'shared')):
+        sys.path.insert(0, parent_dir)
 
 try:
     from shared.recommender_helpers import generate_recommendations_for_student
@@ -71,7 +65,6 @@ except ImportError as e:
     import traceback
     print(f"Warning: Could not import shared module: {e}")
     print(f"Python path: {sys.path}")
-    print(f"API dir: {api_dir}, Parent dir: {parent_dir}")
     traceback.print_exc()
     generate_recommendations_for_student = None
     SemesterScheduler = None

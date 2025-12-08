@@ -5,13 +5,12 @@ RUN apt-get update && apt-get install -y \
     libblas-dev liblapack-dev gfortran \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /notebook
 
 # Copy requirements file and install dependencies
 COPY requirements.txt requirements.txt 
-RUN pip3 install --upgrade pip
-RUN pip3 install -r requirements.txt
+RUN pip3 install --upgrade pip && \
+    pip3 install -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
