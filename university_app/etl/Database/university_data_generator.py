@@ -284,7 +284,7 @@ def generate_location(room_id):
     }
 
 
-# Fixed instructors (AUA faculty)
+# AUA faculty instructors
 FIXED_INSTRUCTORS = [
     {
         "id": 1,

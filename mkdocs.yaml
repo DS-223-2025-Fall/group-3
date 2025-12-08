@@ -42,5 +42,6 @@ plugins:
       handlers:
         python:
           paths:
-            - university_app
+            - .  # Root directory - allows importing university_app.api, university_app.etl, etc.
+            - university_app  # For api and etl module imports
 

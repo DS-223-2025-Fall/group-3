@@ -113,10 +113,6 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
 
     column_mapping = {
         "student": {"id": "student_id", "name": "student_name"},
-        # Note: program CSV already has dept_name, matching the model field
-        # No mapping needed for program table
-        # Note: users CSV uses student_id directly (matches model)
-        # Note: section_name CSV uses section_name and section_id directly (matches model)
     }
 
     mapping = column_mapping.get(csv_filename, {})

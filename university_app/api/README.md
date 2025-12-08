@@ -55,7 +55,7 @@ api/
 │   ├── schema.py        # Pydantic schemas for request/response
 │   ├── database.py      # Database connection and session management
 │   ├── db_helpers.py    # Reusable CRUD helper functions
-│   └── db_init.py       # Database initialization utilities
+│   └── init_db.py       # Database initialization utilities
 ├── requirements.txt     # Python dependencies
 └── Dockerfile           # Docker configuration
 ```

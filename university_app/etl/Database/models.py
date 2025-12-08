@@ -135,7 +135,7 @@ class Takes(Base):
 
     student_id = Column(
         Integer, ForeignKey("students.student_id"), primary_key=True
-    )  # Fixed to match actual schema
+    )
     section_id = Column(Integer, ForeignKey("sections.id"), primary_key=True)
     status = Column(String(20))  # e.g., 'enrolled', 'completed', 'dropped'
     grade = Column(String(5), nullable=True)  # e.g., 'A', 'B+', 'F', 'P', 'NP'
@@ -231,7 +231,6 @@ class RecommendationResult(Base):
     recommended_section_id = Column(Integer, ForeignKey("sections.id"), nullable=False)
     time_slot = Column(Integer, ForeignKey("time_slots.time_slot_id"), nullable=True)
     
-    # Deprecated fields (kept for backward compatibility)
     course_name = Column(String(200), nullable=True)
     cluster = Column(String(200), nullable=True)
     credits = Column(Integer, nullable=True)

@@ -6,25 +6,25 @@ The ETL (Extract, Transform, Load) component is responsible for generating and l
 
 ## Data Generation
 
-::: etl.generate_university_data
+::: university_app.etl.generate_university_data
     options:
         show_source: true
 
 ## Data Loading
 
-::: etl.load_data_to_db
+::: university_app.etl.load_data_to_db
     options:
         show_source: true
 
 ## ETL Database Models
 
-::: etl.Database.models
+::: university_app.etl.Database.models
     options:
         show_source: true
 
 ## Database Configuration
 
-::: etl.Database.database
+::: university_app.etl.Database.database
     options:
         show_source: true
 

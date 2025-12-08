@@ -407,6 +407,7 @@ async def get_sections(
             "location": location.building_room_name if location else "",
             "duration": section.duration or "",
             "syllabusUrl": section.syllabus_url,
+            "instructorBioUrl": instructor.bio_url if instructor else None,
             "credits": course.credits or 0,
             "semester": timeslot.semester if timeslot else "",
             "year": timeslot.year if timeslot else None,

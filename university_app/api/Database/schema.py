@@ -282,7 +282,7 @@ class RecommendationResult(BaseModel):
     """Response schema for recommendation result"""
     id: int
     student_id: int
-    course_id: Optional[int] = None  # Deprecated: can be derived from section->course
+    course_id: Optional[int] = None
     recommended_section_id: int
     time_slot: Optional[int] = None
     recommendation_score: Optional[str] = None
@@ -290,12 +290,11 @@ class RecommendationResult(BaseModel):
     slot_number: Optional[int] = None
     model_version: Optional[str] = None
     time_preference: Optional[str] = None
-    semester: Optional[str] = None  # Kept for backward compatibility
-    year: Optional[int] = None  # Kept for backward compatibility
-    # Deprecated fields (kept for backward compatibility, can be derived from section->course)
-    course_name: Optional[str] = None  # Deprecated: can be derived from section->course
-    cluster: Optional[str] = None  # Deprecated: can be derived from course_cluster
-    credits: Optional[int] = None  # Deprecated: can be derived from course
+    semester: Optional[str] = None
+    year: Optional[int] = None
+    course_name: Optional[str] = None
+    cluster: Optional[str] = None
+    credits: Optional[int] = None
     created_at: str
     updated_at: Optional[str] = None
 
@@ -305,7 +304,7 @@ class RecommendationResult(BaseModel):
 class RecommendationResultCreate(BaseModel):
     """Request schema for creating a recommendation result"""
     student_id: int
-    course_id: Optional[int] = None  # Deprecated: can be derived from section->course
+    course_id: Optional[int] = None
     recommended_section_id: int
     time_slot: Optional[int] = None
     recommendation_score: Optional[str] = None
@@ -313,9 +312,8 @@ class RecommendationResultCreate(BaseModel):
     slot_number: Optional[int] = None
     model_version: Optional[str] = None
     time_preference: Optional[str] = None
-    semester: Optional[str] = None  # Kept for backward compatibility
-    year: Optional[int] = None  # Kept for backward compatibility
-    # Deprecated fields (kept for backward compatibility)
+    semester: Optional[str] = None
+    year: Optional[int] = None
     course_name: Optional[str] = None
     cluster: Optional[str] = None
     credits: Optional[int] = None

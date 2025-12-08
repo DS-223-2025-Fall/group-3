@@ -9,7 +9,6 @@ import {
 } from './ui/dialog'
 import { Button } from './ui/button'
 import { Course } from '@/lib/api'
-import { getInstructorLinkedIn } from '@/data/instructorLinks'
 import { getSavedSchedules, deleteSchedule, SavedSchedule } from '@/lib/scheduleStorage'
 import { toast } from 'sonner'
 
@@ -61,14 +60,18 @@ const renderCourseCard = (course: Course) => (
       </h3>
       <p className="text-sm text-gray-600 mt-1">
         Section {course.section} •{' '}
+        {course.instructorBioUrl ? (
         <a
-          href={getInstructorLinkedIn(course.instructor)}
+            href={course.instructorBioUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="text-[#1e3a5f] hover:text-[#2a4f7a] underline-offset-2"
         >
           {course.instructor}
         </a>
+        ) : (
+          <span>{course.instructor}</span>
+        )}
       </p>
       <p className="text-sm text-gray-600">
         {course.days} • {course.time}

@@ -1,6 +1,5 @@
 import { FileText } from 'lucide-react'
 import { Course } from '@/lib/api'
-import { getInstructorLinkedIn } from '@/data/instructorLinks'
 
 export interface CourseTableProps {
   courses: Course[]
@@ -116,8 +115,9 @@ export default function CourseTable({
                 )}
                 <td className="px-4 py-3 text-sm">{course.section}</td>
                 <td className="px-4 py-3 text-sm">
+                  {course.instructorBioUrl ? (
                   <a
-                    href={getInstructorLinkedIn(course.instructor)}
+                      href={course.instructorBioUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(event) => event.stopPropagation()}
@@ -125,6 +125,9 @@ export default function CourseTable({
                   >
                     {course.instructor}
                   </a>
+                  ) : (
+                    <span>{course.instructor}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm">{course.semesterYear || 'N/A'}</td>
                 <td className="px-4 py-3 text-sm">
