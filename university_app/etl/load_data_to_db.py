@@ -93,9 +93,16 @@ LOAD_ORDER = [
 
 def load_csv_to_db(csv_path: str, model_class, db_session):
     """
-    Description: Load a single CSV file into the corresponding database table using the given model.
-    inputs: csv_path (str), model_class (SQLAlchemy model), db_session (SQLAlchemy Session).
-    return: Number of records inserted into the table (int).
+    Description:
+        Load a single CSV file into the corresponding database table using the given model.
+    
+    Input:
+        csv_path (str): Path to the CSV file
+        model_class: SQLAlchemy model class
+        db_session: SQLAlchemy Session
+    
+    Output:
+        int: Number of records inserted into the table
     """
     if not os.path.exists(csv_path):
         error_msg = f"CSV file not found: {csv_path}"
@@ -214,10 +221,15 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
 
 def main():
     """
-    Description: Create tables if needed and load all CSVs into the database in dependency order.
+    Description:
+        Create tables if needed and load all CSVs into the database in dependency order.
     Clears existing data first to avoid duplicates, then loads fresh data.
-    inputs: None; uses global LOAD_ORDER and TABLE_MODELS.
-    return: None.
+    
+    Input:
+        None (uses global LOAD_ORDER and TABLE_MODELS)
+    
+    Output:
+        None
     """
     logger.info("Starting CSV to database load process...")
 
@@ -434,8 +446,15 @@ def main():
 
 def generate_recommendations_for_all_students(db_session):
     """
+    Description:
     Generate recommendations for all students in the database.
     Uses default 'any' time preference.
+    
+    Input:
+        db_session: SQLAlchemy database session
+    
+    Output:
+        None
     """
     if not RECOMMENDER_AVAILABLE:
         logger.warning("Recommender not available, skipping recommendation generation")

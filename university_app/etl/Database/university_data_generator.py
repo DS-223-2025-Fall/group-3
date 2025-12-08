@@ -222,9 +222,14 @@ COURSES_WITH_CLUSTERS = {
 
 def get_program_from_course(course_name):
     """
-    Description: Infer a program code from a course name prefix.
-    inputs: course_name (str) – full course name (e.g., 'CS 100 Calculus 1').
-    return: Program code (str), defaulting to 'BAB' if prefix is unknown.
+    Description:
+        Infer a program code from a course name prefix.
+    
+    Input:
+        course_name (str): Full course name (e.g., 'CS 100 Calculus 1')
+    
+    Output:
+        str: Program code, defaulting to 'BAB' if prefix is unknown
     """
     parts = course_name.split()
     if len(parts) > 0:
@@ -235,11 +240,17 @@ def get_program_from_course(course_name):
 
 def generate_student(student_id, program_name=None, target_credits=None, name=None):
     """
-    Description: Generate a student record with a name, credits, and program name.
-    inputs: student_id (int) – sequential student identifier, program_name (str) – program name.
-            target_credits (int) – target credit amount (will be updated after takes are generated).
-            name (str) – student name (if None, generates random name).
-    return: Dict with keys 'id', 'name', 'credit', and 'program_name'.
+    Description:
+        Generate a student record with a name, credits, and program name.
+    
+    Input:
+        student_id (int): Sequential student identifier
+        program_name (str, optional): Program name
+        target_credits (int, optional): Target credit amount (will be updated after takes are generated)
+        name (str, optional): Student name (if None, generates random name)
+    
+    Output:
+        Dict with keys 'id', 'name', 'credit', and 'program_name'
     """
     if program_name is None:
         program_name = "BSDS"  # For MVP product, lets assume all students are in BSDS program
@@ -271,9 +282,14 @@ def generate_student(student_id, program_name=None, target_credits=None, name=No
 
 def generate_location(room_id):
     """
-    Description: Generate a location record for a room in Main or PAB.
-    inputs: room_id (int) – numeric room identifier (e.g., 101).
-    return: Dict with keys 'room_id' and 'building_room_name'.
+    Description:
+        Generate a location record for a room in Main or PAB.
+    
+    Input:
+        room_id (int): Numeric room identifier (e.g., 101)
+    
+    Output:
+        Dict with keys 'room_id' and 'building_room_name'
     """
     building = random.choice(BUILDINGS)
     building_room_name = f"{building} {room_id}"
@@ -311,9 +327,14 @@ FIXED_INSTRUCTORS = [
 
 def generate_fixed_instructors(locations):
     """
-    Description: Attach real AUA instructors to random rooms from existing locations.
-    inputs: locations (list[dict]) – location records containing 'room_id'.
-    return: List of instructor dicts with 'id', 'name', 'bio_url', and 'room_id'.
+    Description:
+        Attach real AUA instructors to random rooms from existing locations.
+    
+    Input:
+        locations (list[dict]): Location records containing 'room_id'
+    
+    Output:
+        List of instructor dicts with 'id', 'name', 'bio_url', and 'room_id'
     """
     room_ids = [loc["room_id"] for loc in locations]
     instructors = []
@@ -331,9 +352,14 @@ def generate_fixed_instructors(locations):
 
 def build_course_to_instructor_map():
     """
-    Description: Map each course name to an instructor ID, using fixed assignments and random fallback.
-    inputs: None; uses global COURSES and FIXED_INSTRUCTORS.
-    return: Dict mapping course_name (str) -> instructor_id (int).
+    Description:
+        Map each course name to an instructor ID, using fixed assignments and random fallback.
+    
+    Input:
+        None; uses global COURSES and FIXED_INSTRUCTORS
+    
+    Output:
+        Dict mapping course_name (str) -> instructor_id (int)
     """
     course_to_instructor = {}
     for course_name in COURSES:
@@ -356,9 +382,14 @@ def build_course_to_instructor_map():
 
 def generate_instructor(instructor_id):
     """
-    Description: Deprecated random instructor generator; prefer generate_fixed_instructors().
-    inputs: instructor_id (int) – identifier for the instructor.
-    return: Dict with 'id', 'name', 'bio_url', and 'room_id'.
+    Description:
+        Deprecated random instructor generator; prefer generate_fixed_instructors().
+    
+    Input:
+        instructor_id (int) – identifier for the instructor
+    
+    Output:
+        Dict with 'id', 'name', 'bio_url', and 'room_id'
     """
     first_name = fake.first_name()
     last_name = fake.last_name()
@@ -385,9 +416,14 @@ def generate_instructor(instructor_id):
 
 def generate_department(dept_name, room_id):
     """
-    Description: Generate a department record with a main office location.
-    inputs: dept_name (str), room_id (int) for the department office.
-    return: Dict with 'dept_name' and 'roomID'.
+    Description:
+        Generate a department record with a main office location.
+    
+    Input:
+        dept_name (str), room_id (int) for the department office
+    
+    Output:
+        Dict with 'dept_name' and 'roomID'
     """
     return {
         "dept_name": dept_name,
@@ -397,9 +433,14 @@ def generate_department(dept_name, room_id):
 
 def generate_program(prog_name, dept_name):
     """
-    Description: Generate a program record for a department program.
-    inputs: prog_name (str), dept_name (str).
-    return: Dict with 'prog_name' and 'dept_name'.
+    Description:
+        Generate a program record for a department program.
+    
+    Input:
+        prog_name (str), dept_name (str)
+    
+    Output:
+        Dict with 'prog_name' and 'dept_name'
     """
     return {
         "prog_name": prog_name,
@@ -409,9 +450,14 @@ def generate_program(prog_name, dept_name):
 
 def generate_course(course_id, course_name):
     """
-    Description: Generate a course record with credits.
-    inputs: course_id (int), course_name (str).
-    return: Dict with 'id', 'name', and 'credits'.
+    Description:
+        Generate a course record with credits.
+    
+    Input:
+        course_id (int), course_name (str)
+    
+    Output:
+        Dict with 'id', 'name', and 'credits'
     """
     if (
         "Seminar" in course_name
@@ -432,9 +478,14 @@ def generate_course(course_id, course_name):
 
 def generate_time_slot(time_slot_id, day_of_week, start_time, end_time, year, semester):
     """
-    Description: Generate a time_slot record with day, formatted start/end times, year, and semester.
-    inputs: time_slot_id (int), day_of_week (str), start_time (datetime.time), end_time (datetime.time), year (int), semester (str).
-    return: Dict with 'time_slot_id', 'day_of_week', 'start_time', 'end_time', 'year', and 'semester'.
+    Description:
+        Generate a time_slot record with day, formatted start/end times, year, and semester.
+    
+    Input:
+        time_slot_id (int), day_of_week (str), start_time (datetime.time), end_time (datetime.time), year (int), semester (str)
+    
+    Output:
+        Dict with 'time_slot_id', 'day_of_week', 'start_time', 'end_time', 'year', and 'semester'
     """
     return {
         "time_slot_id": time_slot_id,
@@ -448,9 +499,14 @@ def generate_time_slot(time_slot_id, day_of_week, start_time, end_time, year, se
 
 def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id):
     """
-    Description: Generate a course section record with fixed capacity and a syllabus URL.
-    inputs: section_id, course_id, instructor_id, room_id, time_slot_id (ints).
-    return: Dict with section metadata including 'capacity', 'duration', and 'syllabus_url'.
+    Description:
+        Generate a course section record with fixed capacity and a syllabus URL.
+    
+    Input:
+        section_id, course_id, instructor_id, room_id, time_slot_id (ints)
+    
+    Output:
+        Dict with section metadata including 'capacity', 'duration', and 'syllabus_url'
     Note: year and semester are now stored in the time_slot, not in the section.
     """
     capacity = 30
@@ -471,9 +527,14 @@ def generate_section(section_id, course_id, instructor_id, room_id, time_slot_id
 
 def generate_prerequisites(course_id, prerequisite_id):
     """
-    Description: Generate a prerequisites record linking a course to its prerequisite.
-    inputs: course_id (int), prerequisite_id (int).
-    return: Dict with 'course_id' and 'prerequisite_id'.
+    Description:
+        Generate a prerequisites record linking a course to its prerequisite.
+    
+    Input:
+        course_id (int), prerequisite_id (int)
+    
+    Output:
+        Dict with 'course_id' and 'prerequisite_id'
     """
     return {
         "course_id": course_id,
@@ -483,9 +544,14 @@ def generate_prerequisites(course_id, prerequisite_id):
 
 def generate_takes(student_id, section_id, status="enrolled", grade=None):
     """
-    Description: Generate a takes record representing a student's enrollment in a section.
-    inputs: student_id (int), section_id (int), status (str), grade (str or None).
-    return: Dict with 'student_id', 'section_id', 'status', and 'grade'.
+    Description:
+        Generate a takes record representing a student's enrollment in a section.
+    
+    Input:
+        student_id (int), section_id (int), status (str), grade (str or None)
+    
+    Output:
+        Dict with 'student_id', 'section_id', 'status', and 'grade'
     """
     return {
         "student_id": student_id,
@@ -497,9 +563,14 @@ def generate_takes(student_id, section_id, status="enrolled", grade=None):
 
 def generate_works(dept_name, instructor_id):
     """
-    Description: Generate a works record linking an instructor to a department.
-    inputs: dept_name (str), instructor_id (int).
-    return: Dict with 'dept_name' and 'instructorid'.
+    Description:
+        Generate a works record linking an instructor to a department.
+    
+    Input:
+        dept_name (str), instructor_id (int)
+    
+    Output:
+        Dict with 'dept_name' and 'instructorid'
     """
     return {
         "dept_name": dept_name,
@@ -509,9 +580,14 @@ def generate_works(dept_name, instructor_id):
 
 def generate_hascourse(prog_name, course_id):
     """
-    Description: Generate a hascourse record linking a program to a course.
-    inputs: prog_name (str), course_id (int).
-    return: Dict with 'prog_name' and 'courseid'.
+    Description:
+        Generate a hascourse record linking a program to a course.
+    
+    Input:
+        prog_name (str), course_id (int)
+    
+    Output:
+        Dict with 'prog_name' and 'courseid'
     """
     return {
         "prog_name": prog_name,
@@ -521,9 +597,14 @@ def generate_hascourse(prog_name, course_id):
 
 def generate_cluster(cluster_id, cluster_number, theme=None):
     """
-    Description: Generate a cluster record for a given cluster number.
-    inputs: cluster_id (int), cluster_number (int), theme (str or None).
-    return: Dict with cluster metadata including 'theme'.
+    Description:
+        Generate a cluster record for a given cluster number.
+    
+    Input:
+        cluster_id (int), cluster_number (int), theme (str or None)
+    
+    Output:
+        Dict with cluster metadata including 'theme'
     """
     return {
         "cluster_id": cluster_id,
@@ -534,9 +615,14 @@ def generate_cluster(cluster_id, cluster_number, theme=None):
 
 def generate_course_cluster(course_id, cluster_id):
     """
-    Description: Generate a course_cluster record linking a course to a cluster.
-    inputs: course_id (int), cluster_id (int).
-    return: Dict with 'course_id' and 'cluster_id'.
+    Description:
+        Generate a course_cluster record linking a course to a cluster.
+    
+    Input:
+        course_id (int), cluster_id (int)
+    
+    Output:
+        Dict with 'course_id' and 'cluster_id'
     """
     return {
         "course_id": course_id,
@@ -546,9 +632,14 @@ def generate_course_cluster(course_id, cluster_id):
 
 def generate_preferred(student_id, course_id):
     """
-    Description: Generate a preferred record expressing a student's course preference.
-    inputs: student_id (int), course_id (int).
-    return: Dict with 'student_id' and 'course_id'.
+    Description:
+        Generate a preferred record expressing a student's course preference.
+    
+    Input:
+        student_id (int), course_id (int)
+    
+    Output:
+        Dict with 'student_id' and 'course_id'
     """
     return {
         "student_id": student_id,
@@ -558,9 +649,14 @@ def generate_preferred(student_id, course_id):
 
 def generate_user(user_id, student_id, username=None, password=None):
     """
-    Description: Generate a user record with login credentials linked to a student.
-    inputs: user_id (int), student_id (int), username (str or None), password (str or None).
-    return: Dict with 'user_id', 'username', 'password', and 'student_id'.
+    Description:
+        Generate a user record with login credentials linked to a student.
+    
+    Input:
+        user_id (int), student_id (int), username (str or None), password (str or None)
+    
+    Output:
+        Dict with 'user_id', 'username', 'password', and 'student_id'
     Note: Password must be unique per model constraint.
     """
     if username is None:
@@ -581,9 +677,14 @@ def generate_user(user_id, student_id, username=None, password=None):
 
 def generate_section_name(section_name, section_id):
     """
-    Description: Generate a section_name record linking a section letter/name to a section.
-    inputs: section_name (str) - section letter like 'A', 'B', 'C', etc., section_id (int).
-    return: Dict with 'section_name' and 'section_id'.
+    Description:
+        Generate a section_name record linking a section letter/name to a section.
+    
+    Input:
+        section_name (str) - section letter like 'A', 'B', 'C', etc., section_id (int)
+    
+    Output:
+        Dict with 'section_name' and 'section_id'
     """
     return {
         "section_name": section_name,
@@ -593,9 +694,14 @@ def generate_section_name(section_name, section_id):
 
 def generate_time_slots():
     """
-    Description: Generate all MWF and T/Th time slot records for weekly schedules across all years and semesters.
-    inputs: None; uses fixed patterns for days, time ranges, years, and semesters.
-    return: List of time_slot dicts with IDs, days, start/end times, year, and semester.
+    Description:
+        Generate all MWF and T/Th time slot records for weekly schedules across all years and semesters.
+    
+    Input:
+        None; uses fixed patterns for days, time ranges, years, and semesters
+    
+    Output:
+        List of time_slot dicts with IDs, days, start/end times, year, and semester
     """
     time_slots = []
     time_slot_id = 1
@@ -688,10 +794,18 @@ def generate_time_slots():
 
 def generate_takes_data(students, sections, courses, prerequisites):
     """
-    Description: Generate takes records (enrollments) per student while respecting prerequisites.
+    Description:
+        Generate takes records (enrollments) per student while respecting prerequisites.
     Ensures students have enough completed courses to match their target credit amount.
-    inputs: students, sections, courses, prerequisites (lists of dicts as generated above).
-    return: List of takes dicts with status/grade, ensuring prerequisite completion logic.
+    
+    Input:
+        students (list[dict]): List of student records
+        sections (list[dict]): List of section records
+        courses (list[dict]): List of course records
+        prerequisites (list[dict]): List of prerequisite records
+    
+    Output:
+        List of takes dicts with status/grade, ensuring prerequisite completion logic
     """
     takes = []
 
@@ -785,9 +899,14 @@ def generate_takes_data(students, sections, courses, prerequisites):
 
 def generate_prerequisites_data(courses):
     """
-    Description: Generate a minimal prerequisite set based on course names and simple rules.
-    inputs: courses (list[dict]) – course records with 'id' and 'name'.
-    return: List of prerequisite dicts produced by generate_prerequisites().
+    Description:
+        Generate a minimal prerequisite set based on course names and simple rules.
+    
+    Input:
+        courses (list[dict]) – course records with 'id' and 'name'
+    
+    Output:
+        List of prerequisite dicts produced by generate_prerequisites()
     """
     prerequisites = []
     course_name_to_id = {course["name"]: course["id"] for course in courses}
@@ -877,9 +996,14 @@ def generate_university_dataset(
     current_year=2025,
 ):
     """
-    Description: Generate a full synthetic university dataset consistent with the ERD.
-    inputs: num_students (int), num_locations (int), num_sections_per_course (int), current_year (int).
-    return: Dict mapping table names (str) to lists of row dicts (students, courses, sections, etc.).
+    Description:
+        Generate a full synthetic university dataset consistent with the ERD.
+    
+    Input:
+        num_students (int), num_locations (int), num_sections_per_course (int), current_year (int)
+    
+    Output:
+        Dict mapping table names (str) to lists of row dicts (students, courses, sections, etc.)
     """
     # Generate sequential room_ids starting from 1
     room_ids = list(range(1, num_locations + 1))

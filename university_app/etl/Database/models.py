@@ -328,10 +328,15 @@ def drop_all_tables():
 
 def create_tables():
     """
-    Description: Creates all database tables defined by the ORM models for ETL/testing.
+    Description:
+        Creates all database tables defined by the ORM models for ETL/testing.
     Automatically detects schema mismatches and recreates tables if needed.
-    inputs: None.
-    return: None. The function issues CREATE TABLE statements via SQLAlchemy metadata.
+    
+    Input:
+        None
+    
+    Output:
+        None (the function issues CREATE TABLE statements via SQLAlchemy metadata)
     """
     from sqlalchemy import text, inspect
     

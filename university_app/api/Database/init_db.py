@@ -9,18 +9,19 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy import inspect
 from Database.database import engine, get_db
-from Database.models import StudentDB, CourseDB, ProgramDB, SectionDB, Base
+from Database.models import StudentDB, CourseDB, ProgramDB, SectionDB
 
 
 def is_database_initialized():
     """
-    Check if database is fully initialized by checking multiple key tables for data.
+    Description:
+        Check if database is fully initialized by checking multiple key tables for data.
     
     Input:
         None
     
-    Return:
-        bool: True if database has data, False if empty.
+    Output:
+        bool: True if database has data, False if empty
     """
     try:
         # Check if tables exist
@@ -60,13 +61,14 @@ def is_database_initialized():
 
 def initialize_database():
     """
-    Initialize the database by running the ETL process. Always runs ETL to ensure database has fresh data.
+    Description:
+        Initialize the database by running the ETL process. Always runs ETL to ensure database has fresh data.
     
     Input:
         None
     
-    Return:
-        bool: True if initialization successful, False otherwise.
+    Output:
+        bool: True if initialization successful, False otherwise
     """
     try:
         # Find the ETL directory (mounted at /etl)
@@ -167,14 +169,15 @@ def initialize_database():
 
 def ensure_database_initialized():
     """
-    Main function to ensure database is initialized. Always runs ETL to ensure database has data (will handle existing data gracefully).
-    The ETL process handles all table creation, schema checking, and data loading.
+    Description:
+        Main function to ensure database is initialized. Always runs ETL to ensure database has data (will handle existing data gracefully).
+        The ETL process handles all table creation, schema checking, and data loading.
     
     Input:
         None
     
-    Return:
-        bool: True if initialization successful, False otherwise.
+    Output:
+        bool: True if initialization successful, False otherwise
     """
     logger.info("Ensuring database is initialized...")
     logger.info("ETL will handle table creation, schema checking, and data loading...")

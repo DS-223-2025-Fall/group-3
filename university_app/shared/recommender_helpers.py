@@ -3,22 +3,22 @@ Helper functions for loading data and generating recommendations
 """
 
 import pandas as pd
-from sqlalchemy import create_engine
-from typing import Dict, Optional
+from typing import Dict
 from .semester_scheduler import SemesterScheduler
 
 
 def load_data_from_db(engine, current_year: int = 2025, current_semester: str = 'Fall') -> Dict:
     """
-    Load all necessary data from database into pandas DataFrames.
+    Description:
+        Load all necessary data from database into pandas DataFrames.
     
-    Args:
+    Input:
         engine: SQLAlchemy engine
-        current_year: Current academic year
-        current_semester: Current semester ('Fall', 'Spring', 'Summer')
+        current_year (int): Current academic year
+        current_semester (str): Current semester ('Fall', 'Spring', 'Summer')
     
-    Returns:
-        Dictionary of DataFrames with keys: students, courses, sections, etc.
+    Output:
+        Dict: Dictionary of DataFrames with keys: students, courses, sections, etc.
     """
     data = {}
     
@@ -59,17 +59,18 @@ def generate_recommendations_for_student(
     current_semester: str = 'Fall'
 ) -> list:
     """
-    Generate recommendations for a single student.
+    Description:
+        Generate recommendations for a single student.
     
-    Args:
+    Input:
         engine: SQLAlchemy engine
-        student_id: Student ID to generate recommendations for
-        time_preference: Time preference ('morning', 'afternoon', 'evening', 'any')
-        current_year: Current academic year
-        current_semester: Current semester
+        student_id (int): Student ID to generate recommendations for
+        time_preference (str): Time preference ('morning', 'afternoon', 'evening', 'any')
+        current_year (int): Current academic year
+        current_semester (str): Current semester
     
-    Returns:
-        List of recommendation dictionaries
+    Output:
+        list: List of recommendation dictionaries
     """
     # Load data
     data = load_data_from_db(engine, current_year, current_semester)

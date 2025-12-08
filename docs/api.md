@@ -10,12 +10,6 @@ The API component is a FastAPI-based backend service that provides REST endpoint
     options:
         show_source: true
 
-## Database Models
-
-::: university_app.api.Database.models
-    options:
-        show_source: true
-
 ## Database Configuration
 
 ::: university_app.api.Database.database

@@ -18,15 +18,16 @@ def get_by_id(
     **filters
 ) -> Optional[ModelType]:
     """
+    Description:
     Get a single record by ID or other filters from the database.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        **filters: Keyword arguments for filtering (e.g., student_id=1).
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        **filters: Keyword arguments for filtering (e.g., student_id=1)
     
-    Return:
-        Optional[ModelType]: Model instance or None if not found.
+    Output:
+        Optional[ModelType]: Model instance or None if not found
     """
     try:
         return db.query(model).filter_by(**filters).first()
@@ -42,17 +43,18 @@ def get_all(
     **filters
 ) -> List[ModelType]:
     """
+    Description:
     Get all records with optional filtering and pagination from the database.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        skip (int): Number of records to skip (for pagination), default 0.
-        limit (int): Maximum number of records to return, default 100.
-        **filters: Optional keyword arguments for filtering.
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        skip (int): Number of records to skip (for pagination), default 0
+        limit (int): Maximum number of records to return, default 100
+        **filters: Optional keyword arguments for filtering
     
-    Return:
-        List[ModelType]: List of model instances.
+    Output:
+        List[ModelType]: List of model instances
     """
     try:
         query = db.query(model)
@@ -72,18 +74,19 @@ def create_record(
     data: Dict[str, Any]
 ) -> ModelType:
     """
+    Description:
     Create a new database record with the provided data.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        data (Dict[str, Any]): Dictionary of field names and values.
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        data (Dict[str, Any]): Dictionary of field names and values
     
-    Return:
-        ModelType: Created model instance.
+    Output:
+        ModelType: Created model instance
     
     Raises:
-        HTTPException: If creation fails.
+        HTTPException: If creation fails
     """
     try:
         db_record = model(**data)
@@ -106,19 +109,20 @@ def update_record(
     **filters
 ) -> Optional[ModelType]:
     """
+    Description:
     Update an existing database record with new values.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        data (Dict[str, Any]): Dictionary of field names and new values.
-        **filters: Keyword arguments to identify the record (e.g., student_id=1).
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        data (Dict[str, Any]): Dictionary of field names and new values
+        **filters: Keyword arguments to identify the record (e.g., student_id=1)
     
-    Return:
-        Optional[ModelType]: Updated model instance or None if not found.
+    Output:
+        Optional[ModelType]: Updated model instance or None if not found
     
     Raises:
-        HTTPException: If update fails or record not found.
+        HTTPException: If update fails or record not found
     """
     try:
         record = db.query(model).filter_by(**filters).first()
@@ -148,18 +152,19 @@ def delete_record(
     **filters
 ) -> bool:
     """
+    Description:
     Delete a database record matching the provided filters.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        **filters: Keyword arguments to identify the record (e.g., student_id=1).
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        **filters: Keyword arguments to identify the record (e.g., student_id=1)
     
-    Return:
-        bool: True if deleted, False if not found.
+    Output:
+        bool: True if deleted, False if not found
     
     Raises:
-        HTTPException: If deletion fails.
+        HTTPException: If deletion fails
     """
     try:
         record = db.query(model).filter_by(**filters).first()
@@ -182,15 +187,16 @@ def count_records(
     **filters
 ) -> int:
     """
+    Description:
     Count records matching the given filters in the database.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        **filters: Optional keyword arguments for filtering.
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        **filters: Optional keyword arguments for filtering
     
-    Return:
-        int: Number of matching records.
+    Output:
+        int: Number of matching records
     """
     try:
         query = db.query(model)
@@ -207,15 +213,16 @@ def exists(
     **filters
 ) -> bool:
     """
+    Description:
     Check if a record exists in the database matching the provided filters.
     
     Input:
-        db (Session): Database session.
-        model (Type[ModelType]): SQLAlchemy model class.
-        **filters: Keyword arguments for filtering.
+        db (Session): Database session
+        model (Type[ModelType]): SQLAlchemy model class
+        **filters: Keyword arguments for filtering
     
-    Return:
-        bool: True if record exists, False otherwise.
+    Output:
+        bool: True if record exists, False otherwise
     """
     try:
         return db.query(model).filter_by(**filters).first() is not None

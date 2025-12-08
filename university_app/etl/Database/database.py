@@ -28,9 +28,14 @@ SessionLocal = orm.sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db() -> Generator[orm.Session, None, None]:
     """
-    Description: Provides a database session for performing ORM operations and closes it when done.
-    inputs: None.
-    return: Generator that yields a `sqlalchemy.orm.Session` instance.
+    Description:
+        Provides a database session for performing ORM operations and closes it when done.
+    
+    Input:
+        None
+    
+    Output:
+        Generator that yields a `sqlalchemy.orm.Session` instance
     """
     db = SessionLocal()
     try:

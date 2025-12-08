@@ -24,9 +24,14 @@ CURRENT_YEAR = 2025
 
 def main():
     """
-    Description: Generate the university dataset, write each table to CSV, and print a summary with sample records.
-    inputs: None (uses module-level configuration constants).
-    return: None.
+    Description:
+        Generate the university dataset, write each table to CSV, and print a summary with sample records.
+    
+    Input:
+        None (uses module-level configuration constants)
+    
+    Output:
+        None
     """
     logger.info("Starting university data generation...")
 
