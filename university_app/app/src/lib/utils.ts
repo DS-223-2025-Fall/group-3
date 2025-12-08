@@ -116,3 +116,33 @@ export function getStudentStanding(credits: number | undefined): string {
   }
 }
 
+/**
+ * Categorize a course time as morning, afternoon, or evening
+ * Matches backend logic: morning (8-12), afternoon (12-17), evening (>=17 or <8)
+ */
+export function getTimeCategory(time?: string): 'morning' | 'afternoon' | 'evening' | 'unknown' {
+  if (!time) return 'unknown'
+  
+  const [start] = time.split('-')
+  if (!start) return 'unknown'
+  
+  const [hours = '0'] = start.trim().split(':')
+  const hour = parseInt(hours, 10)
+  
+  if (Number.isNaN(hour)) return 'unknown'
+  
+  // Match backend logic from semester_scheduler.py line 350
+  // morning: 8 <= hour < 12
+  // afternoon: 12 <= hour < 17
+  // evening: hour >= 17 OR hour < 8
+  if (hour >= 8 && hour < 12) {
+    return 'morning'
+  } else if (hour >= 12 && hour < 17) {
+    return 'afternoon'
+  } else if (hour >= 17 || hour < 8) {
+    return 'evening'
+  }
+  
+  return 'unknown'
+}
+

@@ -1924,6 +1924,7 @@ async def generate_recommendations(
         db.commit()
         
         # Generate new recommendations
+        print(f"🔍 Generating recommendations for student {request.student_id} with time_preference: '{request.time_preference}'")
         recommendations = generate_recommendations_for_student(
             engine=engine,
             student_id=request.student_id,
@@ -1931,6 +1932,12 @@ async def generate_recommendations(
             current_year=request.year,
             current_semester=request.semester
         )
+        
+        print(f"📊 Generated {len(recommendations) if recommendations else 0} recommendations")
+        if recommendations:
+            # Log first few recommendations to see their section IDs
+            for i, rec in enumerate(recommendations[:3]):
+                print(f"  Rec {i+1}: course_id={rec.get('course_id')}, section_id={rec.get('section_id')}, course_name={rec.get('course_name')}")
         
         if not recommendations:
             return {

@@ -329,6 +329,7 @@ class SemesterScheduler:
             return sections_df
         
         filtered_sections = []
+        debug_info = []
         
         for _, section in sections_df.iterrows():
             section_id = int(section['id'])
@@ -343,21 +344,36 @@ class SemesterScheduler:
                         # Parse time (format: HH:MM:SS)
                         hour = int(start_time.split(':')[0])
                         
+                        matches = False
                         if time_preference == 'morning' and 8 <= hour < 12:
+                            matches = True
                             filtered_sections.append(section)
                         elif time_preference == 'afternoon' and 12 <= hour < 17:
+                            matches = True
                             filtered_sections.append(section)
                         elif time_preference == 'evening' and (17 <= hour or hour < 8):
+                            matches = True
                             filtered_sections.append(section)
-                    except:
+                        
+                        if not matches:
+                            debug_info.append(f"Section {section_id}: hour={hour}, time={start_time}, pref={time_preference} - NO MATCH")
+                    except Exception as e:
                         # If parsing fails, include the section
+                        debug_info.append(f"Section {section_id}: parse error - {e}")
                         filtered_sections.append(section)
             else:
                 # If no time info and time_preference is 'any', include the section
                 # Otherwise, exclude sections without time info when filtering by specific time preference
                 if time_preference == 'any':
                     filtered_sections.append(section)
+                else:
+                    debug_info.append(f"Section {section_id}: no timeslot info")
                 # If time_preference is specific (morning/afternoon/evening) and no time info, exclude it
+        
+        if time_preference == 'evening' and len(debug_info) > 0 and len(filtered_sections) == 0:
+            print(f"⚠️ Evening filter debug (input: {len(sections_df)} sections):")
+            for info in debug_info[:5]:  # Show first 5
+                print(f"  {info}")
         
         if filtered_sections:
             return pd.DataFrame(filtered_sections)
@@ -540,12 +556,17 @@ class SemesterScheduler:
         sections_filtered = self.filter_by_semester_availability(sections.copy())
         sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
         
-        # Only fallback if time_preference is 'any' - otherwise strictly enforce time preference
+        # If no sections match both semester AND time preference, try just time preference
+        # This allows us to recommend courses in the time range even if they're not in next semester
+        if len(sections_filtered) == 0 and time_preference != 'any':
+            # Fallback: try filtering by time preference only (ignore semester)
+            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
+        
+        # Final fallback: if time_preference is 'any', try with just semester
         if len(sections_filtered) == 0 and time_preference == 'any':
-            # Fallback: if no sections match strict filters, try with just semester
             sections_filtered = self.filter_by_semester_availability(sections.copy())
         
-        # Final fallback only if time_preference is 'any'
+        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
         if len(sections_filtered) == 0 and time_preference == 'any':
             sections_filtered = sections.copy()
         
@@ -660,12 +681,17 @@ class SemesterScheduler:
         sections_filtered = self.filter_by_semester_availability(sections.copy())
         sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
         
-        # Only fallback if time_preference is 'any' - otherwise strictly enforce time preference
+        # If no sections match both semester AND time preference, try just time preference
+        # This allows us to recommend courses in the time range even if they're not in next semester
+        if len(sections_filtered) == 0 and time_preference != 'any':
+            # Fallback: try filtering by time preference only (ignore semester)
+            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
+        
+        # Final fallback: if time_preference is 'any', try with just semester
         if len(sections_filtered) == 0 and time_preference == 'any':
-            # Fallback: if no sections match strict filters, try with just semester
             sections_filtered = self.filter_by_semester_availability(sections.copy())
         
-        # Final fallback only if time_preference is 'any'
+        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
         if len(sections_filtered) == 0 and time_preference == 'any':
             sections_filtered = sections.copy()
         
@@ -734,12 +760,17 @@ class SemesterScheduler:
         sections_filtered = self.filter_by_semester_availability(sections.copy())
         sections_filtered = self.filter_by_time_preference(sections_filtered, time_preference)
         
-        # Only fallback if time_preference is 'any' - otherwise strictly enforce time preference
+        # If no sections match both semester AND time preference, try just time preference
+        # This allows us to recommend courses in the time range even if they're not in next semester
+        if len(sections_filtered) == 0 and time_preference != 'any':
+            # Fallback: try filtering by time preference only (ignore semester)
+            sections_filtered = self.filter_by_time_preference(sections.copy(), time_preference)
+        
+        # Final fallback: if time_preference is 'any', try with just semester
         if len(sections_filtered) == 0 and time_preference == 'any':
-            # Fallback: if no sections match strict filters, try with just semester
             sections_filtered = self.filter_by_semester_availability(sections.copy())
         
-        # Final fallback only if time_preference is 'any'
+        # Ultimate fallback: if still nothing and time_preference is 'any', use all sections
         if len(sections_filtered) == 0 and time_preference == 'any':
             sections_filtered = sections.copy()
         

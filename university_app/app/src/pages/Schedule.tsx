@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Course, fetchCourses, fetchDraftSchedules, DraftSchedule, deleteDraftSchedule, generateRecommendations, fetchRecommendationResults, RecommendationResult } from '@/lib/api'
 import DraftScheduleModal from '@/components/DraftSchedule'
-import { groupCoursesByDays } from '@/lib/utils'
+import { groupCoursesByDays, getTimeCategory } from '@/lib/utils'
 import CourseCard from '@/components/CourseCard'
 
 export default function Schedule() {
@@ -46,17 +46,56 @@ export default function Schedule() {
     try {
       const data = await fetchRecommendationResults(user.student_id)
       
-      // Filter by time preference if not 'any'
-      const filtered = timePreference === 'any' 
-        ? data 
-        : data.filter(r => r.time_preference === timePreference)
+      // Fetch all courses first to get time information
+      const courses = await fetchCourses({})
+      
+      // Create a map of section ID to course for quick lookup
+      const sectionToCourse = new Map(
+        courses.map(c => [parseInt(c.id), c])
+      )
+      
+      // Filter by time preference based on actual course time, not stored preference
+      let filtered = data
+      if (timePreference !== 'any') {
+        filtered = data.filter(r => {
+          const course = sectionToCourse.get(r.recommended_section_id)
+          if (!course) {
+            // Course not found - might be from a different semester/year
+            // Log for debugging but don't show to user
+            console.debug(`Course not found for section ID: ${r.recommended_section_id}, recommendation ID: ${r.id}`)
+            return false
+          }
+          if (!course.time) {
+            // If no time info, exclude when filtering by specific time
+            console.debug(`Course ${course.name} (section ${r.recommended_section_id}) has no time info`)
+            return false
+          }
+          const timeCategory = getTimeCategory(course.time)
+          if (timeCategory === 'unknown') {
+            console.debug(`Could not categorize time "${course.time}" for course ${course.name}`)
+            return false
+          }
+          return timeCategory === timePreference
+        })
+        
+        // Debug: Log filtering results
+        console.log(`Filtered ${filtered.length} of ${data.length} recommendations for ${timePreference} time preference`)
+        if (filtered.length === 0 && data.length > 0) {
+          console.log('Sample recommendations that were filtered out:', data.slice(0, 3).map(r => ({
+            id: r.id,
+            section_id: r.recommended_section_id,
+            course_name: r.course_name,
+            time_preference: r.time_preference
+          })))
+          console.log('Available courses in map:', Array.from(sectionToCourse.keys()).slice(0, 10))
+        }
+      }
       
       setRecommendations(filtered)
 
       // Convert recommendations to Course format for display
       if (filtered.length > 0) {
         const sectionIds = filtered.map(r => r.recommended_section_id)
-        const courses = await fetchCourses({})
         const recommendedCourseList = courses.filter(c => 
           sectionIds.includes(parseInt(c.id))
         )

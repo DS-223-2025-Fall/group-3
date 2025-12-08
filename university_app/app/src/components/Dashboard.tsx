@@ -45,13 +45,13 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#1e3a5f] text-white flex flex-col">
+      <aside className="w-64 bg-[#1e3a5f] text-white flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-[#2a4a6f]">
           <h2 className="text-xl font-bold">Student Portal</h2>
           <p className="text-sm text-gray-300 mt-1">{user?.student_name || user?.username}</p>
         </div>
         
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon
@@ -75,7 +75,7 @@ export default function Dashboard() {
           </ul>
         </nav>
 
-        <div className="p-4 border-t border-[#2a4a6f]">
+        <div className="p-4 border-t border-[#2a4a6f] flex-shrink-0">
           <Button
             onClick={handleLogout}
             variant="outline"
