@@ -1,5 +1,11 @@
 site_name: University App Documentation
 
+# Documentation source directory (relative to this config file)
+docs_dir: docs
+
+# Output directory for built site (relative to this config file)
+site_dir: site
+
 nav:
   - Home: index.md
   - ETL: etl.md
@@ -42,6 +48,6 @@ plugins:
       handlers:
         python:
           paths:
-            - .  # Root directory - allows importing university_app.api, university_app.etl, etc.
-            - university_app  # For api and etl module imports
+            - ..  # Parent directory (project root) - allows importing university_app.api, university_app.etl, etc.
+            - ../university_app  # For api and etl module imports
 

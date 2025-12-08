@@ -8,7 +8,7 @@ university_app/etl/data/
 university_app/etl/__pycache__/
 ../.DS_Store
 etl/__pycache__/
-site/
+mkdocs/site/
 university_app/api/Database/__pycache__/
 university_app/api/__pycache__/
 university_app/notebook/Database/__pycache__/

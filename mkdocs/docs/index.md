@@ -1,8 +1,6 @@
-# University App Documentation
+# University Course Management System
 
-Welcome to the University App documentation!
-
-This project is a full-stack university course management and recommendation system built with microservices architecture.
+Full-stack application for managing university courses, schedules, and academic analytics.
 
 ## Problem
 
@@ -22,7 +20,7 @@ The University Course Management System is a web application that enables studen
   - Student credit standing (Freshman/Sophomore/Junior/Senior)
   - Time preferences (morning/afternoon/evening)
   - Semester availability
-- **View Statistics**: Access academic performance statistics and analytics
+- **View Statistics**: Access academic performance statistics and analytics with 13+ visualization metrics
 - **Save and Manage Schedules**: Save multiple draft schedules for future reference
 
 ## Expected Outcomes
@@ -33,21 +31,25 @@ The University Course Management System is a web application that enables studen
 - **Time Optimization**: Recommendations consider time preferences to build convenient schedules
 - **Academic Progress Tracking**: Statistics help students understand their academic performance
 
-## Project Structure
+## Architecture
 
-The project consists of several main components:
+- **Frontend**: React + TypeScript (Vite, Tailwind CSS)
+- **Backend**: FastAPI (Python) with 50+ REST endpoints
+- **Database**: PostgreSQL with 20+ tables
+- **ETL**: Data generation and loading pipeline
+- **Infrastructure**: Docker & Docker Compose
 
-- **ETL**: Data extraction, transformation, and loading pipeline
-- **API**: FastAPI-based backend service
-- **APP**: Frontend React application
-- **Notebook**: Jupyter notebooks for data analysis and recommendations
+## Components
 
-## Getting Started
+- **API**: FastAPI backend with CRUD operations, recommendations, and statistics
+- **APP**: React frontend for course browsing and schedule management
+- **ETL**: Data generation and database initialization
+- **Shared**: Production-ready recommendation engine
+- **Notebook**: Jupyter environment for data analysis
 
-To get started with the project, please refer to the individual component documentation:
+## Documentation
 
-- [ETL Documentation](etl.md)
-- [API Documentation](api.md)
-- [APP Documentation](app.md)
-- [API Models Documentation](api_models.md)
-
+- [ETL Documentation](etl.md) - Data generation and loading
+- [API Documentation](api.md) - Backend API reference
+- [API Models](api_models.md) - Database schema
+- [Frontend App](app.md) - React application guide

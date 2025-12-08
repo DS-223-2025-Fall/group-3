@@ -15,7 +15,7 @@ Full-stack application for managing university courses, students, and schedules.
 1. **Clone and navigate:**
    ```bash
    git clone https://github.com/DS-223-2025-Fall/group-3
-   cd group-3
+   cd group-3/university_app/
    ```
 
 2. **Start services:**
@@ -23,45 +23,19 @@ Full-stack application for managing university courses, students, and schedules.
    docker compose up -d --build
    ```
 
-   Database initializes automatically on first startup.
-
 3. **Access:**
    - Frontend: http://localhost:5173
    - API: http://localhost:8008
    - API Docs: http://localhost:8008/docs
    - pgAdmin: http://localhost:5050
-
-## Common Commands
-
-```bash
-# Start services
-docker compose up -d
-
-# Stop services
-docker compose down
-
-# Regenerate data (clears database and reloads)
-docker compose down -v
-docker compose up -d --build
-
-# Access database
-docker compose exec db psql -U postgres -d university_db
-```
-
-## Documentation
-
-```bash
-# Serve locally
-python3 -m mkdocs serve
-
-# Build static site
-python3 -m mkdocs build
-```
-
-Available at http://127.0.0.1:8000
-
-## Notes
-
-- Database data persists in Docker volume between restarts
-- `.env` file included with default configuration
-- All services auto-initialize on first startup
+   - Documentation: http://127.0.0.1:8000
+     ```bash
+     # Install documentation dependencies (optional, for local development)
+     cd mkdocs && pip install -r requirements.txt
+     
+     # Serve documentation locally
+     cd mkdocs && python3 -m mkdocs serve
+     
+     # Build static documentation site
+     cd mkdocs && python3 -m mkdocs build
+     ```
