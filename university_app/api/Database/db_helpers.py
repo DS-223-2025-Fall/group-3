@@ -8,7 +8,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import Type, TypeVar, Dict, Any, Optional, List
 from fastapi import HTTPException
 
-# Generic type for SQLAlchemy models
 ModelType = TypeVar('ModelType')
 
 
@@ -58,8 +57,6 @@ def get_all(
     """
     try:
         query = db.query(model)
-        
-        # Apply filters
         if filters:
             query = query.filter_by(**filters)
         
@@ -136,8 +133,6 @@ def update_record(
         db.commit()
         db.refresh(record)
         return record
-    except HTTPException:
-        raise
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -174,8 +169,6 @@ def delete_record(
         db.delete(record)
         db.commit()
         return True
-    except HTTPException:
-        raise
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

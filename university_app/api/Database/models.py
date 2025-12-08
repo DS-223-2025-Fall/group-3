@@ -7,8 +7,6 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Uniq
 from sqlalchemy.sql import func
 from Database.database import Base
 
-# Database Models
-
 class UserDB(Base):
     """
     Database model for User table.

@@ -5,8 +5,6 @@ Provides REST API endpoints for managing students, courses, and sections.
 This module defines all API endpoints including student CRUD operations.
 """
 
-# Import all models so they are registered with SQLAlchemy Base metadata
-# This ensures all tables are created when Base.metadata.create_all() is called
 from Database.models import (
     UserDB, StudentDB, SectionDB, SectionNameDB, TakesDB, LocationDB, InstructorDB, 
     DepartmentDB, ProgramDB, CourseDB, TimeSlotDB, PrerequisitesDB, 
@@ -47,9 +45,6 @@ import sys
 from datetime import date
 from typing import Optional, List
 
-# Add shared module to path (works both in Docker and locally)
-# In Docker: shared is mounted at /shared
-# Locally: shared is at ../shared relative to api/
 if os.path.exists('/shared'):
     sys.path.insert(0, '/')
 else:
@@ -71,8 +66,6 @@ except ImportError as e:
 
 app = FastAPI(title="University Course Management API")
 
-# Add CORS middleware for frontend
-# In production, set ALLOWED_ORIGINS environment variable (comma-separated)
 allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",") if os.environ.get("ALLOWED_ORIGINS") else ["*"]
 app.add_middleware(
     CORSMiddleware,
@@ -82,8 +75,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files for syllabi
-# Syllabi are stored in /api/syllabi/ in the container (mounted from ./syllabi on host)
 SYLLABI_DIR = "/api/syllabi"
 if os.path.exists(SYLLABI_DIR):
     app.mount("/syllabi", StaticFiles(directory=SYLLABI_DIR), name="syllabi")
@@ -102,8 +93,6 @@ async def startup_event():
         None
     """
     ensure_database_initialized()
-
-# AUTHENTICATION ENDPOINTS
 
 class LoginRequest(BaseModel):
     username: str
@@ -147,9 +136,6 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         } if student else None
     }
 
-# STUDENT ENDPOINTS
-
-# GET Request - Retrieve a student by ID
 @app.get("/students/{student_id}", response_model=Student)
 async def get_student(student_id: int, db: Session = Depends(get_db)):
     """
@@ -171,7 +157,6 @@ async def get_student(student_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
-# POST Request - Create a new student
 @app.post("/students/", response_model=Student)
 async def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     """
@@ -204,8 +189,6 @@ async def create_student(student: StudentCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Invalid data: {str(e)}")
 
-# PUT - Update a student
-
 @app.put("/students/{student_id}", response_model=Student)
 async def update_student(student_id: int, updated_student: StudentCreate, db: Session = Depends(get_db)):
     """
@@ -231,8 +214,6 @@ async def update_student(student_id: int, updated_student: StudentCreate, db: Se
         db.commit()
         db.refresh(student)
         return student
-    except HTTPException:
-        raise
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -240,8 +221,6 @@ async def update_student(student_id: int, updated_student: StudentCreate, db: Se
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Invalid data: {str(e)}")
 
-
-# DELETE - Delete a student by id
 
 @app.delete("/students/{student_id}")
 async def delete_student(student_id: int, db: Session = Depends(get_db)):
@@ -265,8 +244,6 @@ async def delete_student(student_id: int, db: Session = Depends(get_db)):
         db.delete(student)
         db.commit()
         return {"message": "Student deleted successfully"}
-    except HTTPException:
-        raise
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -513,8 +490,6 @@ async def update_section(section_id: int, updated_section: SectionCreate, db: Se
         db.commit()
         db.refresh(section)
         return section
-    except HTTPException:
-        raise
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -544,8 +519,6 @@ async def delete_section(section_id: int, db: Session = Depends(get_db)):
         db.delete(section)
         db.commit()
         return {"message": "Section deleted successfully"}
-    except HTTPException:
-        raise
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -2005,9 +1978,6 @@ async def generate_recommendations(
             "count": saved_count,
             "time_preference": request.time_preference
         }
-        
-    except HTTPException:
-        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
@@ -2634,7 +2604,7 @@ async def get_student_statistics(
                     return "afternoon"
                 else:
                     return "evening"
-            except:
+            except (ValueError, IndexError):
                 return "unknown"
         
         time_slot_performance = {"morning": [], "afternoon": [], "evening": []}
@@ -2806,7 +2776,6 @@ async def get_student_statistics(
             semester_performance_heatmap=semester_heatmap
         )
     except HTTPException:
-        # Re-raise HTTP exceptions (like 404)
         raise
     except Exception as e:
         # Log the error and return 500

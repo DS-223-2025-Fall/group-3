@@ -1,5 +1,3 @@
-# Dockerfile
-
 FROM python:3.12-slim-bookworm
 
 RUN apt-get update && apt-get install -y \
@@ -17,11 +15,7 @@ RUN pip3 install --upgrade pip && \
     pip install -r requirements.txt
 
 COPY . .
-
-# Copy entrypoint script outside the /api mount to avoid being overridden by the bind mount
 COPY entrypoint.sh /docker-entrypoint.sh
-
-# Normalize line endings and set permissions for entrypoint script
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 EXPOSE 8000

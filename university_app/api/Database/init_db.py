@@ -32,7 +32,6 @@ def is_database_initialized():
             logger.info("No tables found - database is empty")
             return False
         
-        # Check if key tables have data
         db = next(get_db())
         try:
             checks = {
@@ -42,7 +41,6 @@ def is_database_initialized():
                 'sections': db.query(SectionDB).count(),
             }
             
-            # Database is initialized if ALL key tables have data
             is_initialized = all(count > 0 for count in checks.values())
             
             if is_initialized:
@@ -54,7 +52,6 @@ def is_database_initialized():
         finally:
             db.close()
     except Exception as e:
-        # If we can't check (e.g., tables don't exist), assume empty
         logger.warning(f"Could not check database status: {e}. Assuming empty.")
         return False
 

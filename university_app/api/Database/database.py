@@ -13,23 +13,14 @@ from dotenv import load_dotenv
 import os
 
 
-# Load environment variables from .env file
-# Load from parent directory (university_app/.env) - works for both local dev and Docker
 load_dotenv("../.env")
 
-# Get the database URL from environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL")
-
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is not set. Please check your .env file.")
 
-# Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
-
-# Base class for declarative models
 Base = declarative_base()
-
-# SessionLocal for database operations
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
