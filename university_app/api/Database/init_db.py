@@ -170,24 +170,32 @@ def initialize_database():
 def ensure_database_initialized():
     """
     Description:
-        Main function to ensure database is initialized. Always runs ETL to ensure database has data (will handle existing data gracefully).
-        The ETL process handles all table creation, schema checking, and data loading.
+        Main function to ensure database is initialized. Only runs ETL if database is empty or incomplete.
+        Preserves user-generated data (draft schedules, etc.) when database is already initialized.
     
     Input:
         None
     
     Output:
-        bool: True if initialization successful, False otherwise
+        bool: True if initialization successful or already initialized, False otherwise
     """
     logger.info("Ensuring database is initialized...")
+    
+    # First, check if database is already initialized
+    if is_database_initialized():
+        logger.info("✅ Database is already initialized. Skipping ETL to preserve user data.")
+        logger.info("   To refresh ETL data manually, run: docker compose run --rm etl bash run_etl.sh")
+        return True
+    
+    # Database is empty or incomplete - run ETL to initialize
+    logger.info("Database is empty or incomplete. Running ETL to initialize...")
     logger.info("ETL will handle table creation, schema checking, and data loading...")
     
     # Run ETL - it will:
     # 1. Check schema version and recreate tables if mismatched
     # 2. Create all tables if they don't exist
-    # 3. Clear existing data
+    # 3. Clear existing ETL data (preserves draft_schedules, draft_schedule_sections)
     # 4. Load fresh data from CSV files
-    logger.info("Running ETL to initialize/refresh database...")
     if initialize_database():
         logger.info("✅ Database initialization completed successfully via ETL.")
         return True
