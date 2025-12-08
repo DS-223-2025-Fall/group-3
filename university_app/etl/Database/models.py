@@ -334,7 +334,7 @@ def drop_all_tables():
                 table_lower = table.lower()
                 if table_lower in ETL_TABLES:
                     print(f"   Dropping ETL table: {table}")
-                    connection.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                connection.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
                     dropped_count += 1
                 elif table_lower in PRESERVE_TABLES:
                     print(f"   Preserving user table: {table}")
