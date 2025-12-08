@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { API_BASE_URL } from '@/lib/api'
 
 interface User {
   name: string
@@ -36,7 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8008'
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {

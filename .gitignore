@@ -1,17 +1,51 @@
+# Python
 venv/
-.DS_Store
-university_app/syllabi/*.pdf
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database data
 pgadmin_data/
 postgres_data/
-university_app/etl/Database/__pycache__/
+
+# Data files
 university_app/etl/data/
-university_app/etl/__pycache__/
-../.DS_Store
-etl/__pycache__/
-mkdocs/site/
-university_app/api/Database/__pycache__/
-university_app/api/__pycache__/
-university_app/notebook/Database/__pycache__/
 university_app/api/syllabi/*.pdf
 university_app/api/syllabi.zip
-university_app/shared/__pycache__/
+university_app/syllabi/*.pdf
+
+# Documentation build
+mkdocs/site/
+
+# Node.js / Frontend (app)
+university_app/app/node_modules/
+university_app/app/dist/
+university_app/app/dist-ssr/
+university_app/app/*.log
+university_app/app/npm-debug.log*
+university_app/app/yarn-debug.log*
+university_app/app/yarn-error.log*
+university_app/app/pnpm-debug.log*
+university_app/app/*.local
+
+# Editor and OS
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/extensions.json
+.idea

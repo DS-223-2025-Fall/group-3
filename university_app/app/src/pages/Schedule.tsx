@@ -5,29 +5,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Course, fetchCourses, fetchDraftSchedules, DraftSchedule, deleteDraftSchedule } from '@/lib/api'
+import { Course, fetchCourses, fetchDraftSchedules, DraftSchedule, deleteDraftSchedule, generateRecommendations, fetchRecommendationResults, RecommendationResult } from '@/lib/api'
 import DraftScheduleModal from '@/components/DraftSchedule'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8008'
-
-interface RecommendationResult {
-  id: number
-  student_id: number
-  course_id: number | null
-  recommended_section_id: number
-  course_name: string | null
-  cluster: string | null
-  credits: number | null
-  time_slot: string | null
-  recommendation_score: string | null
-  why_recommended: string | null
-  slot_number: number | null
-  model_version: string | null
-  time_preference: string | null
-  semester: string | null
-  year: number | null
-  created_at: string
-}
+import { groupCoursesByDays } from '@/lib/utils'
+import CourseCard from '@/components/CourseCard'
 
 export default function Schedule() {
   const { user } = useAuth()
@@ -41,25 +22,6 @@ export default function Schedule() {
   const [draftLoading, setDraftLoading] = useState(false)
   const [timePreference, setTimePreference] = useState<string>('any')
   const [generating, setGenerating] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  // Ensure component is marked as mounted and force re-render when user changes
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Force re-render when user changes to ensure buttons are visible
-  // This is critical after login when user state is set asynchronously
-  useEffect(() => {
-    // When user becomes available, ensure component re-renders
-    if (user && mounted) {
-      // Small delay to ensure React has processed the state update
-      const timer = setTimeout(() => {
-        setMounted(true) // Force re-render
-      }, 0)
-      return () => clearTimeout(timer)
-    }
-  }, [user, mounted])
 
   // Load recommended schedule
   useEffect(() => {
@@ -77,20 +39,12 @@ export default function Schedule() {
 
   const loadRecommendedSchedule = async () => {
     if (!user?.student_id) {
-      console.log('No student_id found for user:', user)
       return
     }
     
     setLoading(true)
     try {
-      const url = `${API_BASE_URL}/recommendation-results?student_id=${user.student_id}`
-      console.log('Fetching recommendations from:', url)
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error('Failed to fetch recommendations')
-      }
-      const data: RecommendationResult[] = await response.json()
-      console.log('Received recommendations:', data.length, 'records for student_id:', user.student_id)
+      const data = await fetchRecommendationResults(user.student_id)
       
       // Filter by time preference if not 'any'
       const filtered = timePreference === 'any' 
@@ -101,23 +55,13 @@ export default function Schedule() {
 
       // Convert recommendations to Course format for display
       if (filtered.length > 0) {
-        // Map recommended_section_id (integer) to section IDs
         const sectionIds = filtered.map(r => r.recommended_section_id)
-        console.log('Looking for sections:', sectionIds)
         const courses = await fetchCourses({})
-        console.log('Total courses available:', courses.length)
-        // Match courses where the section id (c.id is section.id as string) matches recommended_section_id
         const recommendedCourseList = courses.filter(c => 
           sectionIds.includes(parseInt(c.id))
         )
-        console.log('Matched courses:', recommendedCourseList.length)
-        if (recommendedCourseList.length === 0 && sectionIds.length > 0) {
-          console.warn('No courses matched for section IDs:', sectionIds)
-          console.log('Available course IDs (first 10):', courses.slice(0, 10).map(c => c.id))
-        }
         setRecommendedCourses(recommendedCourseList)
       } else {
-        console.log('No recommendations found in API response')
         setRecommendedCourses([])
       }
     } catch (error) {
@@ -129,7 +73,6 @@ export default function Schedule() {
 
   const loadDraftSchedules = async () => {
     if (!user?.student_id) {
-      console.log('No student_id found for user:', user)
       return
     }
     
@@ -144,7 +87,7 @@ export default function Schedule() {
     }
   }
 
-  const generateRecommendations = async () => {
+  const handleGenerateRecommendations = async () => {
     if (!user?.student_id) {
       toast.error('Student ID not found')
       return
@@ -152,31 +95,18 @@ export default function Schedule() {
     
     setGenerating(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          student_id: user.student_id,
-          time_preference: timePreference,
-          semester: 'Fall',
-          year: 2025
-        }),
+      const result = await generateRecommendations({
+        student_id: user.student_id,
+        time_preference: timePreference,
+        semester: 'Fall',
+        year: 2025
       })
       
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Failed to generate recommendations')
-      }
-      
-      const result = await response.json()
       toast.success(result.message || `Generated ${result.count} recommendations`)
       
       // Reload recommendations
       await loadRecommendedSchedule()
     } catch (error) {
-      console.error('Error generating recommendations:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to generate recommendations')
     } finally {
       setGenerating(false)
@@ -213,83 +143,7 @@ export default function Schedule() {
     }
   }
 
-  const parseCourseTime = (timeRange?: string) => {
-    if (!timeRange) return Number.POSITIVE_INFINITY
-    const [start] = timeRange.split('-')
-    if (!start) return Number.POSITIVE_INFINITY
-    const [hours = '0', minutes = '0'] = start.trim().split(':')
-    const hourValue = parseInt(hours, 10)
-    const minuteValue = parseInt(minutes, 10)
-    if (Number.isNaN(hourValue) || Number.isNaN(minuteValue)) {
-      return Number.POSITIVE_INFINITY
-    }
-    return hourValue * 60 + minuteValue
-  }
-
-  const isMWFCourse = (days?: string): boolean => {
-    if (!days) return false
-    const normalizedDays = days.toLowerCase()
-    return (
-      normalizedDays.includes('monday') ||
-      normalizedDays.includes('wednesday') ||
-      normalizedDays.includes('friday')
-    )
-  }
-
-  const isTThCourse = (days?: string): boolean => {
-    if (!days) return false
-    const normalizedDays = days.toLowerCase()
-    return (
-      normalizedDays.includes('tuesday') ||
-      normalizedDays.includes('thursday')
-    )
-  }
-
-  const renderCourseCard = (course: Course) => (
-    <div
-      key={course.id}
-      className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition"
-    >
-      <div className="flex-1">
-        <h3 className="font-semibold text-lg">
-          <span className="font-bold">{course.name}</span>
-        </h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Section {course.section} •{' '}
-          {course.instructorBioUrl ? (
-            <a
-              href={course.instructorBioUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#1e3a5f] hover:text-[#2a4f7a] underline-offset-2"
-            >
-              {course.instructor}
-            </a>
-          ) : (
-            <span>{course.instructor}</span>
-          )}
-        </p>
-        <p className="text-sm text-gray-600">
-          {course.time}
-        </p>
-        <p className="text-sm text-gray-600">
-          {course.location} • {course.duration} • {course.credits || 0} Credits
-        </p>
-        {course.cluster && course.cluster.length > 0 && (
-          <div className="flex gap-2 mt-2">
-            {course.cluster.map((clusterNum) => (
-              <span
-                key={clusterNum}
-                className="px-2 py-1 bg-yellow-400 text-[#1e3a5f] rounded-full text-xs font-semibold"
-              >
-                Cluster {clusterNum}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  const { mwfCourses: recommendedMWF, tthCourses: recommendedTTh } = groupCoursesByDays(recommendedCourses)
 
   return (
     <div>
@@ -301,7 +155,6 @@ export default function Schedule() {
         value={activeTab} 
         onValueChange={(v) => setActiveTab(v as 'recommended' | 'draft')} 
         className="w-full"
-        key={`tabs-${user?.student_id || 'no-user'}-${mounted}`}
       >
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="recommended" className="flex items-center gap-2">
@@ -314,9 +167,8 @@ export default function Schedule() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="recommended" className="mt-6" key={`recommended-${user?.student_id || 'no-user'}`}>
+        <TabsContent value="recommended" className="mt-6">
           <div className="bg-white rounded-lg shadow-md p-8">
-            {/* Header with controls - ALWAYS VISIBLE - Works independently of notebook */}
             <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
               <div>
                 <h2 className="text-2xl font-semibold text-[#1e3a5f] mb-2">
@@ -342,7 +194,7 @@ export default function Schedule() {
                   </Select>
                 </div>
                 <Button
-                  onClick={generateRecommendations}
+                  onClick={handleGenerateRecommendations}
                   disabled={generating || !user?.student_id}
                   className="bg-[#1e3a5f] hover:bg-[#2a4f7a] text-white min-w-[180px]"
                 >
@@ -361,7 +213,6 @@ export default function Schedule() {
               </div>
             </div>
 
-            {/* Content area - buttons above are always visible and work independently */}
             {loading ? (
               <p className="text-center text-gray-500 py-8">Loading recommended schedule...</p>
             ) : recommendations.length === 0 ? (
@@ -373,7 +224,7 @@ export default function Schedule() {
                 <p className="text-sm text-gray-500 mb-4">
                   {timePreference !== 'any'
                     ? `Click "Get Recommendations" above to generate recommendations for ${timePreference} time preference.`
-                    : 'Select your preferred time above and click "Get Recommendations" to generate your personalized schedule. This works independently and only generates recommendations for you.'}
+                    : 'Select your preferred time above and click "Get Recommendations" to generate your personalized schedule.'}
                 </p>
                 {!user?.student_id && (
                   <p className="text-xs text-red-500 mt-2">
@@ -382,36 +233,46 @@ export default function Schedule() {
                 )}
               </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Monday / Wednesday / Friday Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                      <Calendar className="h-5 w-5 text-[#1e3a5f]" />
-                      <h3 className="text-lg font-semibold text-[#1e3a5f]">
-                        Monday / Wednesday / Friday
-                      </h3>
-                    </div>
-                    <div className="space-y-3">
-                      {recommendedCourses
-                        .filter((course) => isMWFCourse(course.days))
-                        .sort((a, b) => parseCourseTime(a.time) - parseCourseTime(b.time))
-                        .map(renderCourseCard)}
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Monday / Wednesday / Friday Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                    <Calendar className="h-5 w-5 text-[#1e3a5f]" />
+                    <h3 className="text-lg font-semibold text-[#1e3a5f]">
+                      Monday / Wednesday / Friday
+                    </h3>
                   </div>
+                  <div className="space-y-3">
+                    {recommendedMWF.length > 0 ? (
+                      recommendedMWF.map((course) => (
+                        <CourseCard key={course.id} course={course} />
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm py-4 text-center">
+                        No Monday/Wednesday/Friday courses
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-                  {/* Tuesday / Thursday Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                      <Calendar className="h-5 w-5 text-[#1e3a5f]" />
-                      <h3 className="text-lg font-semibold text-[#1e3a5f]">
-                        Tuesday / Thursday
-                      </h3>
-                    </div>
-                    <div className="space-y-3">
-                      {recommendedCourses
-                        .filter((course) => isTThCourse(course.days))
-                        .sort((a, b) => parseCourseTime(a.time) - parseCourseTime(b.time))
-                        .map(renderCourseCard)}
+                {/* Tuesday / Thursday Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                    <Calendar className="h-5 w-5 text-[#1e3a5f]" />
+                    <h3 className="text-lg font-semibold text-[#1e3a5f]">
+                      Tuesday / Thursday
+                    </h3>
+                  </div>
+                  <div className="space-y-3">
+                    {recommendedTTh.length > 0 ? (
+                      recommendedTTh.map((course) => (
+                        <CourseCard key={course.id} course={course} />
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm py-4 text-center">
+                        No Tuesday/Thursday courses
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -490,7 +351,9 @@ export default function Schedule() {
         open={isDraftModalOpen}
         onOpenChange={setIsDraftModalOpen}
         selectedCourses={selectedDraftCourses}
-        onRemoveCourse={() => {}}
+        onRemoveCourse={() => {
+          // Read-only view in Schedule page
+        }}
         onScheduleSaved={() => {
           loadDraftSchedules()
         }}

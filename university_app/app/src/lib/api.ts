@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8008'
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8008'
 
 export interface Course {
   id: string
@@ -266,6 +266,72 @@ export async function fetchStatistics(studentId: number): Promise<Statistics> {
     return await response.json()
   } catch (error) {
     console.error('Error fetching statistics:', error)
+    throw error
+  }
+}
+
+export interface GenerateRecommendationsParams {
+  student_id: number
+  time_preference: string
+  semester?: string
+  year?: number
+}
+
+export interface RecommendationResult {
+  id: number
+  student_id: number
+  course_id: number | null
+  recommended_section_id: number
+  course_name: string | null
+  cluster: string | null
+  credits: number | null
+  time_slot: string | null
+  recommendation_score: string | null
+  why_recommended: string | null
+  slot_number: number | null
+  model_version: string | null
+  time_preference: string | null
+  semester: string | null
+  year: number | null
+  created_at: string
+}
+
+export async function fetchRecommendationResults(studentId: number): Promise<RecommendationResult[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/recommendation-results?student_id=${studentId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch recommendations')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching recommendation results:', error)
+    throw error
+  }
+}
+
+export interface GenerateRecommendationsResponse {
+  message: string
+  count: number
+}
+
+export async function generateRecommendations(params: GenerateRecommendationsParams): Promise<GenerateRecommendationsResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to generate recommendations')
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.error('Error generating recommendations:', error)
     throw error
   }
 }

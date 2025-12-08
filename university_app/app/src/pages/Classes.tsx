@@ -4,6 +4,7 @@ import { fetchCourses, fetchPrograms, Course, Program } from '@/lib/api'
 import SearchFilters from '@/components/SearchFilters'
 import CourseTable from '@/components/CourseTable'
 import DraftScheduleModal from '@/components/DraftSchedule'
+import { checkTimeConflict } from '@/lib/utils'
 
 export default function Classes() {
   const [year, setYear] = useState('All')
@@ -55,34 +56,6 @@ export default function Classes() {
     }
   }
 
-  const checkTimeConflict = (course1: Course, course2: Course): boolean => {
-    if (!course1.days || !course2.days || !course1.time || !course2.time) {
-      return false
-    }
-
-    const days1 = course1.days.split(',').map((d) => d.trim())
-    const days2 = course2.days.split(',').map((d) => d.trim())
-    const hasCommonDay = days1.some((day) => days2.includes(day))
-
-    if (!hasCommonDay) {
-      return false
-    }
-
-    const parseTime = (timeStr: string) => {
-      const match = timeStr.match(/(\d{2}):(\d{2})/)
-      if (!match) return null
-      return parseInt(match[1]) * 60 + parseInt(match[2])
-    }
-
-    const [start1, end1] = course1.time.split('-').map(parseTime)
-    const [start2, end2] = course2.time.split('-').map(parseTime)
-
-    if (!start1 || !end1 || !start2 || !end2) {
-      return false
-    }
-
-    return !(end1 <= start2 || end2 <= start1)
-  }
 
   const handleCourseSelect = (courseId: string) => {
     const newSelected = new Set(selectedCourses)
@@ -92,39 +65,43 @@ export default function Classes() {
 
     if (newSelected.has(courseId)) {
       newSelected.delete(courseId)
-    } else {
-      const selectedCourseList = courses.filter((c) => newSelected.has(c.id))
-      const hasConflict = selectedCourseList.some((selectedCourse) =>
-        checkTimeConflict(course, selectedCourse)
-      )
-
-      if (hasConflict) {
-        toast.error(
-          `Time conflict detected! ${course.code} conflicts with another selected course.`
-        )
-        return
-      }
-
-      newSelected.add(courseId)
-      toast.success(`${course.code} added to schedule`)
+      setSelectedCourses(newSelected)
+      return
     }
 
+    // Check for time conflicts with already selected courses
+    const selectedCourseList = courses.filter((c) => newSelected.has(c.id))
+    const hasConflict = selectedCourseList.some((selectedCourse) =>
+      checkTimeConflict(course, selectedCourse)
+    )
+
+    if (hasConflict) {
+      toast.error(
+        `Time conflict detected! ${course.code} conflicts with another selected course.`
+      )
+      return
+    }
+
+    newSelected.add(courseId)
     setSelectedCourses(newSelected)
+    toast.success(`${course.code} added to schedule`)
   }
 
   const handleClusterFilter = (cluster: number) => {
-    setSelectedCluster(cluster === selectedCluster ? null : cluster)
     if (cluster === selectedCluster) {
+      // Deselect cluster - reload all courses
+      setSelectedCluster(null)
       loadCourses()
     } else {
+      // Select cluster - filter courses
+      setSelectedCluster(cluster)
       const filtered = courses.filter((c) => c.cluster.includes(cluster))
       setCourses(filtered)
     }
   }
 
   const handleDraftSchedule = () => {
-    const selectedCourseList = courses.filter((c) => selectedCourses.has(c.id))
-    if (selectedCourseList.length === 0) {
+    if (selectedCourses.size === 0) {
       toast.info('Please select at least one course to create a draft schedule')
       return
     }

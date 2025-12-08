@@ -1,5 +1,5 @@
 import { FileText } from 'lucide-react'
-import { Course } from '@/lib/api'
+import { Course, API_BASE_URL } from '@/lib/api'
 
 export interface CourseTableProps {
   courses: Course[]
@@ -16,7 +16,6 @@ export default function CourseTable({
   onClusterFilter,
   showCluster,
 }: CourseTableProps) {
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8008'
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
