@@ -4,10 +4,12 @@ ETL Script for Generating and Loading University Data into a Database.
 This script generates data for students, instructors, courses, departments, sections, etc.
 and saves the data to CSV files according to the ERD.
 
-Modules:
-    - Database.university_data_generator: Functions to generate university data.
-    - pandas: For data manipulation and storage in CSV.
-    - loguru: For logging.
+Usage:
+    python generate_university_data.py
+
+Prerequisites:
+    - Database.university_data_generator module must be available
+    - pandas must be installed
 """
 
 import pandas as pd
@@ -20,6 +22,27 @@ NUM_STUDENTS = 10
 NUM_LOCATIONS = 50
 NUM_SECTIONS_PER_COURSE = 1
 CURRENT_YEAR = 2025
+
+# Table names in dependency order (for consistent ordering)
+TABLE_NAMES = [
+    "location",       # No dependencies
+    "student",        # No dependencies
+    "users",          # Depends on student
+    "instructor",     # Depends on location
+    "department",     # Depends on location
+    "program",        # Depends on department
+    "course",         # No dependencies
+    "time_slot",      # No dependencies
+    "section",        # Depends on location, time_slot, course, instructor
+    "section_name",   # Depends on section
+    "prerequisites",  # Depends on course
+    "takes",          # Depends on student, section
+    "works",          # Depends on instructor, department
+    "hascourse",      # Depends on program, course
+    "cluster",        # No dependencies
+    "course_cluster", # Depends on course, cluster
+    "preferred",      # Depends on student, course
+]
 
 
 def main():
@@ -48,27 +71,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Save each table to CSV
-    tables = [
-        "student",
-        "location",
-        "instructor",
-        "department",
-        "program",
-        "course",
-        "time_slot",
-        "section",
-        "section_name",
-        "prerequisites",
-        "takes",
-        "works",
-        "hascourse",
-        "cluster",
-        "course_cluster",
-        "preferred",
-        "users",
-    ]
-
-    for table_name in tables:
+    for table_name in TABLE_NAMES:
         df = pd.DataFrame(dataset[table_name])
         csv_path = f"{output_dir}/{table_name}.csv"
         df.to_csv(csv_path, index=False)
@@ -171,7 +174,7 @@ def main():
     print("=" * 60)
     print(f"\nAll CSV files saved to: {output_dir}/")
     print("Files created:")
-    for table_name in tables:
+    for table_name in TABLE_NAMES:
         print(f"  - {table_name}.csv")
 
 

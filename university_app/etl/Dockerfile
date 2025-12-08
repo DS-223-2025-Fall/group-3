@@ -7,11 +7,16 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /etl
 
-COPY requirements.txt . 
+# Install base requirements (shared across all services)
+COPY shared/requirements-base.txt /tmp/requirements-base.txt
 RUN pip3 install --upgrade pip && \
-    pip3 install -r requirements.txt
+    pip3 install -r /tmp/requirements-base.txt
 
-COPY . .
+# Install service-specific requirements
+COPY etl/requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY etl/ .
 
 RUN chmod +x run_etl.sh
 

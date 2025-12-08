@@ -2,7 +2,7 @@
 Database models for the university ETL schema.
 """
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, text, inspect
 from sqlalchemy.sql import func
 from Database.database import Base, engine
 
@@ -256,8 +256,6 @@ def check_schema_version():
     Check if database schema matches current models.
     Returns True if schema is up to date, False if recreation needed.
     """
-    from sqlalchemy import text, inspect
-    
     try:
         inspector = inspect(engine)
         existing_tables = inspector.get_table_names()
@@ -298,9 +296,7 @@ def drop_all_tables():
     Drop all ETL-managed tables in the database. Used for clean recreation.
     Preserves user-generated tables: draft_schedules, draft_schedule_sections, recommendation_results
     """
-    from sqlalchemy import text, inspect
-    
-    # ETL-managed tables (from LOAD_ORDER in load_data_to_db.py)
+    # ETL-managed tables (must match LOAD_ORDER in load_data_to_db.py)
     ETL_TABLES = {
         "users", "students", "locations", "instructors", "departments", 
         "programs", "courses", "time_slots", "sections", "section_name",
@@ -315,8 +311,14 @@ def drop_all_tables():
         "draft_schedules", "draft_schedule_sections"
     }
     
+    # Orphaned/legacy tables to drop (no longer in codebase)
+    ORPHANED_TABLES = {
+        "ab_test_assignments", "ui_element_clicks"
+    }
+    
     print("⚠️  Dropping ETL-managed tables for clean recreation...")
     print("   Preserving user-generated tables: draft_schedules, draft_schedule_sections")
+    print("   Dropping orphaned tables: ab_test_assignments, ui_element_clicks")
     
     try:
         with engine.connect() as connection:
@@ -327,14 +329,18 @@ def drop_all_tables():
             inspector = inspect(engine)
             all_tables = inspector.get_table_names()
             
-            # Only drop ETL-managed tables
+            # Drop ETL-managed tables and orphaned tables
             dropped_count = 0
             for table in all_tables:
                 # Normalize table name (handle case sensitivity)
                 table_lower = table.lower()
                 if table_lower in ETL_TABLES:
                     print(f"   Dropping ETL table: {table}")
-                connection.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                    connection.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                    dropped_count += 1
+                elif table_lower in ORPHANED_TABLES:
+                    print(f"   Dropping orphaned table: {table}")
+                    connection.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
                     dropped_count += 1
                 elif table_lower in PRESERVE_TABLES:
                     print(f"   Preserving user table: {table}")
@@ -367,8 +373,6 @@ def create_tables():
     Output:
         None (the function issues CREATE TABLE statements via SQLAlchemy metadata)
     """
-    from sqlalchemy import text, inspect
-    
     print("=" * 60)
     print("Checking database schema...")
     print("=" * 60)

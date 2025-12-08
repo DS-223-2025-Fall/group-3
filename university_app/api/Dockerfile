@@ -10,12 +10,17 @@ WORKDIR /api
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-COPY requirements.txt .
+# Install base requirements (shared across all services)
+COPY shared/requirements-base.txt /tmp/requirements-base.txt
 RUN pip3 install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install -r /tmp/requirements-base.txt
 
-COPY . .
-COPY entrypoint.sh /docker-entrypoint.sh
+# Install service-specific requirements
+COPY api/requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+COPY api/ .
+COPY api/entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 EXPOSE 8000

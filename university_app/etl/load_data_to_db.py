@@ -33,11 +33,9 @@ shared_paths = [
     os.path.join(os.path.dirname(__file__), '..', 'shared'),  # Local development
 ]
 
-shared_found = False
 for path in shared_paths:
     if os.path.exists(path) and os.path.exists(os.path.join(path, '__init__.py')):
         sys.path.insert(0, os.path.dirname(path) if path != '/shared' else '/')
-        shared_found = True
         break
 
 try:
@@ -97,18 +95,13 @@ def load_csv_to_db(csv_path: str, model_class, db_session):
         Load a single CSV file into the corresponding database table using the given model.
     
     Input:
-        csv_path (str): Path to the CSV file
+        csv_path (str): Path to the CSV file (assumed to exist - check in caller)
         model_class: SQLAlchemy model class
         db_session: SQLAlchemy Session
     
     Output:
         int: Number of records inserted into the table
     """
-    if not os.path.exists(csv_path):
-        error_msg = f"CSV file not found: {csv_path}"
-        logger.error(error_msg)
-        raise FileNotFoundError(error_msg)
-
     df = pd.read_csv(csv_path)
     if df.empty:
         error_msg = f"CSV file is empty: {csv_path}"
@@ -349,24 +342,6 @@ def main():
                     continue  # Don't raise, continue to next table
                 
                 logger.info(f"   CSV file found ({file_size} bytes)")
-                
-                # Verify parent tables exist for foreign key dependencies
-                if table_name == "users":
-                    try:
-                        student_count = db.query(TABLE_MODELS["student"]).count()
-                        logger.info(f"   Parent table 'student' has {student_count} records")
-                        if student_count == 0:
-                            logger.warning(f"   ⚠️  WARNING: 'student' table is empty! 'users' table requires student records.")
-                    except Exception as e:
-                        logger.warning(f"   Could not check parent table: {e}")
-                elif table_name == "section_name":
-                    try:
-                        section_count = db.query(TABLE_MODELS["section"]).count()
-                        logger.info(f"   Parent table 'section' has {section_count} records")
-                        if section_count == 0:
-                            logger.warning(f"   ⚠️  WARNING: 'section' table is empty! 'section_name' table requires section records.")
-                    except Exception as e:
-                        logger.warning(f"   Could not check parent table: {e}")
                 
                 count = load_csv_to_db(csv_path, model_class, db)
                 if count == 0:

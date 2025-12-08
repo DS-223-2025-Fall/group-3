@@ -7,13 +7,17 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /notebook
 
-# Copy requirements file and install dependencies
-COPY requirements.txt requirements.txt 
+# Install base requirements (shared across all services)
+COPY shared/requirements-base.txt /tmp/requirements-base.txt
 RUN pip3 install --upgrade pip && \
-    pip3 install -r requirements.txt
+    pip3 install -r /tmp/requirements-base.txt
+
+# Install service-specific requirements
+COPY notebook/requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
 
 # Copy the rest of the application code
-COPY . .
+COPY notebook/ .
 
 # Expose port 8888 for Jupyter Notebook
 EXPOSE 8888

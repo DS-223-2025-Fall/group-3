@@ -220,24 +220,6 @@ COURSES_WITH_CLUSTERS = {
 }
 
 
-def get_program_from_course(course_name):
-    """
-    Description:
-        Infer a program code from a course name prefix.
-    
-    Input:
-        course_name (str): Full course name (e.g., 'CS 100 Calculus 1')
-    
-    Output:
-        str: Program code, defaulting to 'BAB' if prefix is unknown
-    """
-    parts = course_name.split()
-    if len(parts) > 0:
-        prefix = parts[0]
-        return COURSE_PREFIX_TO_PROGRAM.get(prefix, "BAB")
-    return "BAB"
-
-
 def generate_student(student_id, program_name=None, target_credits=None, name=None):
     """
     Description:
@@ -1312,26 +1294,3 @@ def generate_university_dataset(
         "preferred": preferred,
         "users": users,
     }
-
-
-if __name__ == "__main__":
-    dataset = generate_university_dataset(
-        num_students=10,
-        num_locations=50,
-        num_sections_per_course=1,
-        current_year=2025,
-    )
-
-    print(f"Generated {len(dataset['student'])} students")
-    print(f"Generated {len(dataset['location'])} locations")
-    print(f"Generated {len(dataset['instructor'])} instructors")
-    print(f"Generated {len(dataset['department'])} departments")
-    print(f"Generated {len(dataset['program'])} programs")
-    print(f"Generated {len(dataset['course'])} courses")
-    print(f"Generated {len(dataset['time_slot'])} time slots")
-    print(f"Generated {len(dataset['section'])} sections")
-    print(f"Generated {len(dataset['prerequisites'])} prerequisites")
-    print(f"Generated {len(dataset['takes'])} student enrollments")
-    print(f"Generated {len(dataset['works'])} instructor-department assignments")
-    print(f"Generated {len(dataset['hascourse'])} program-course relationships")
-    

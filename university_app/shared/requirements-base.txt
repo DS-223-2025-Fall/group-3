@@ -1,0 +1,15 @@
+# Shared base requirements for all Python services
+# Common dependencies used across ETL, API, and Notebook
+
+# Database
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# Data processing
+pandas==2.2.3
+numpy==2.1.2
+
+# Utilities
+python-dotenv==1.0.1
+loguru==0.7.2
+

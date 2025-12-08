@@ -44,8 +44,8 @@ services:
   etl:
     container_name: ${CONTAINER_NAME_ETL:-group-3_etl}
     build:
-      context: ./etl
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./etl/Dockerfile
     ports:
       - 3000:3000
     volumes:
@@ -58,8 +58,8 @@ services:
   api:
     container_name: ${CONTAINER_NAME_API:-group-3_api}
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./api/Dockerfile
     volumes:
       - ./api:/api
       - ./shared:/shared
@@ -83,8 +83,8 @@ services:
   notebook:
     container_name: ${CONTAINER_NAME_NOTEBOOK:-group-3_notebook}
     build:
-      context: ./notebook
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./notebook/Dockerfile
     ports:
       - 8888:8888
     volumes:
