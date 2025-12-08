@@ -151,3 +151,122 @@ export async function deleteDraftSchedule(draftScheduleId: number): Promise<void
   }
 }
 
+export interface GPAProgressPoint {
+  term: string
+  year: number
+  semester: string
+  gpa: number
+}
+
+export interface CreditsProgress {
+  credit_earned: number
+  total_credits: number
+  remaining: number
+}
+
+export interface SemesterProgress {
+  percentage: number
+  days_passed: number
+  days_total: number
+}
+
+export interface CourseCompletionByProgram {
+  program: string
+  taken: number
+  remaining: number
+  total: number
+}
+
+export interface GradeDistribution {
+  grade: string
+  count: number
+  percentage: number
+}
+
+export interface PerformanceByCourseType {
+  course_type: string
+  average_gpa: number
+  course_count: number
+}
+
+export interface CreditAccumulation {
+  term: string
+  year: number
+  semester: string
+  credits_earned: number
+  cumulative_credits: number
+}
+
+export interface TimeSlotPerformance {
+  time_slot: string
+  average_gpa: number
+  course_count: number
+}
+
+export interface CourseLoad {
+  term: string
+  year: number
+  semester: string
+  credits: number
+}
+
+export interface GradeTrendByCourseType {
+  term: string
+  year: number
+  semester: string
+  course_type: string
+  gpa: number
+}
+
+export interface PrerequisiteStatus {
+  course_id: number
+  course_name: string
+  prerequisites_completed: number
+  prerequisites_total: number
+  completion_percentage: number
+}
+
+export interface CourseDifficultyPerformance {
+  course_id: number
+  course_name: string
+  credits: number
+  grade: string
+  gpa_value: number
+}
+
+export interface SemesterPerformanceHeatmap {
+  day_of_week: string
+  time_slot: string
+  average_gpa: number
+  course_count: number
+}
+
+export interface Statistics {
+  gpa_progress: GPAProgressPoint[]
+  credits_progress: CreditsProgress
+  semester_progress: SemesterProgress
+  course_completion: CourseCompletionByProgram[]
+  grade_distribution: GradeDistribution[]
+  performance_by_course_type: PerformanceByCourseType[]
+  credit_accumulation: CreditAccumulation[]
+  time_slot_performance: TimeSlotPerformance[]
+  course_load: CourseLoad[]
+  grade_trends_by_course_type: GradeTrendByCourseType[]
+  prerequisites_status: PrerequisiteStatus[]
+  course_difficulty_performance: CourseDifficultyPerformance[]
+  semester_performance_heatmap: SemesterPerformanceHeatmap[]
+}
+
+export async function fetchStatistics(studentId: number): Promise<Statistics> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/statistics/${studentId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch statistics')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching statistics:', error)
+    throw error
+  }
+}
+

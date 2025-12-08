@@ -1,6 +1,6 @@
 """
 Database models for the University Course Management System.
-Defines all SQLAlchemy database models for the complete university system including students, courses, sections, and A/B testing tables.
+Defines all SQLAlchemy database models for the complete university system including students, courses, and sections.
 """
 
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, UniqueConstraint
@@ -249,67 +249,6 @@ class RecommendationResultDB(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-
-class ABTestAssignmentDB(Base):
-    """
-    Database model for A/B testing assignments.
-    
-    Tracks which students are assigned to which test groups
-    for comparing different UI element positions and configurations.
-    """
-    __tablename__ = "ab_test_assignments"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    student_id = Column(Integer, ForeignKey('students.student_id'), unique=True, nullable=False, index=True)
-    
-    # Test group assignment
-    test_group = Column(String(1), nullable=False)  # 'A' or 'B'
-    
-    # UI Element Positions (stored as JSON string)
-    # Format: {"search_bar": "top", "dropdowns": "left", "buttons": "right", "header_color": "blue"}
-    ui_config = Column(Text)  # JSON string with UI element positions
-    
-    # Timestamp
-    assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
-class UIElementClickDB(Base):
-    """
-    Database model for tracking clicks on UI elements.
-    
-    Tracks which UI elements users click on and their positions
-    to determine optimal UI layouts.
-    
-    Connected to ab_test_assignments because:
-    - The element_position is determined by the test assignment's ui_config
-    - We need to analyze clicks by test group (A or B)
-    - Clicks are a direct result of the A/B test assignment
-    """
-    __tablename__ = "ui_element_clicks"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    
-    # Foreign key to ab_test_assignments (primary relationship)
-    # This connects clicks to the test assignment, which determines the UI positions
-    assignment_id = Column(Integer, ForeignKey('ab_test_assignments.id'), nullable=False, index=True)
-    
-    # Keep student_id for convenience/performance (denormalized)
-    # Can also get via assignment.student_id, but this avoids joins for student queries
-    # NOTE: This should always match assignment.student_id (derived automatically in API)
-    student_id = Column(Integer, ForeignKey('students.student_id'), nullable=False, index=True)
-    
-    # UI element information
-    element_type = Column(String(50), nullable=False)  # 'search_bar', 'dropdown', 'button', 'slider', etc.
-    element_id = Column(String(100))  # Specific element identifier (e.g., 'search_button', 'year_dropdown')
-    element_position = Column(String(50))  # Position variant (e.g., 'top', 'left', 'right', 'bottom')
-    
-    # Click metadata
-    click_count = Column(Integer, default=1)  # Number of clicks (can aggregate)
-    page_url = Column(String(500))  # URL where click occurred
-    
-    # Timestamp
-    clicked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
 
 class DraftScheduleDB(Base):

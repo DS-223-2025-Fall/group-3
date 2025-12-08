@@ -94,9 +94,9 @@ export default function SearchFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All</SelectItem>
-                <SelectItem value="GenEd">GenEd</SelectItem>
-                <SelectItem value="Major">Major</SelectItem>
-                <SelectItem value="Elective">Elective</SelectItem>
+                <SelectItem value="GENED">GENED - General Education</SelectItem>
+                <SelectItem value="BSDS">BSDS - Data Science</SelectItem>
+                <SelectItem value="FND">FND - Foundation</SelectItem>
               </SelectContent>
             </Select>
           </div>

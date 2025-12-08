@@ -162,7 +162,7 @@ export default function Classes() {
         selectedCourses={selectedCourses}
         onCourseSelect={handleCourseSelect}
         onClusterFilter={handleClusterFilter}
-        showCluster={courseType === 'GENED'}
+        showCluster={courseType === 'GENED' || courseType === 'GenEd'}
       />
 
       <DraftScheduleModal

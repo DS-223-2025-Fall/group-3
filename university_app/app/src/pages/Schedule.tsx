@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Sparkles, FileText } from 'lucide-react'
+import { Calendar, Sparkles, FileText, Clock, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import { Course, fetchCourses, fetchDraftSchedules, DraftSchedule, deleteDraftSchedule } from '@/lib/api'
 import DraftScheduleModal from '@/components/DraftSchedule'
 
@@ -37,13 +39,34 @@ export default function Schedule() {
   const [selectedDraftCourses, setSelectedDraftCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(false)
   const [draftLoading, setDraftLoading] = useState(false)
+  const [timePreference, setTimePreference] = useState<string>('any')
+  const [generating, setGenerating] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Ensure component is marked as mounted and force re-render when user changes
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Force re-render when user changes to ensure buttons are visible
+  // This is critical after login when user state is set asynchronously
+  useEffect(() => {
+    // When user becomes available, ensure component re-renders
+    if (user && mounted) {
+      // Small delay to ensure React has processed the state update
+      const timer = setTimeout(() => {
+        setMounted(true) // Force re-render
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [user, mounted])
 
   // Load recommended schedule
   useEffect(() => {
     if (user?.student_id && activeTab === 'recommended') {
       loadRecommendedSchedule()
     }
-  }, [user?.student_id, activeTab])
+  }, [user?.student_id, activeTab, timePreference])
 
   // Load draft schedules
   useEffect(() => {
@@ -68,12 +91,18 @@ export default function Schedule() {
       }
       const data: RecommendationResult[] = await response.json()
       console.log('Received recommendations:', data.length, 'records for student_id:', user.student_id)
-      setRecommendations(data)
+      
+      // Filter by time preference if not 'any'
+      const filtered = timePreference === 'any' 
+        ? data 
+        : data.filter(r => r.time_preference === timePreference)
+      
+      setRecommendations(filtered)
 
       // Convert recommendations to Course format for display
-      if (data.length > 0) {
+      if (filtered.length > 0) {
         // Map recommended_section_id (integer) to section IDs
-        const sectionIds = data.map(r => r.recommended_section_id)
+        const sectionIds = filtered.map(r => r.recommended_section_id)
         console.log('Looking for sections:', sectionIds)
         const courses = await fetchCourses({})
         console.log('Total courses available:', courses.length)
@@ -112,6 +141,45 @@ export default function Schedule() {
       console.error('Error loading draft schedules:', error)
     } finally {
       setDraftLoading(false)
+    }
+  }
+
+  const generateRecommendations = async () => {
+    if (!user?.student_id) {
+      toast.error('Student ID not found')
+      return
+    }
+    
+    setGenerating(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          student_id: user.student_id,
+          time_preference: timePreference,
+          semester: 'Fall',
+          year: 2025
+        }),
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || 'Failed to generate recommendations')
+      }
+      
+      const result = await response.json()
+      toast.success(result.message || `Generated ${result.count} recommendations`)
+      
+      // Reload recommendations
+      await loadRecommendedSchedule()
+    } catch (error) {
+      console.error('Error generating recommendations:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to generate recommendations')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -229,7 +297,12 @@ export default function Schedule() {
         <h1 className="text-4xl font-bold text-[#1e3a5f]">Schedule</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'recommended' | 'draft')} className="w-full">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(v) => setActiveTab(v as 'recommended' | 'draft')} 
+        className="w-full"
+        key={`tabs-${user?.student_id || 'no-user'}-${mounted}`}
+      >
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="recommended" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
@@ -241,29 +314,74 @@ export default function Schedule() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="recommended" className="mt-6">
+        <TabsContent value="recommended" className="mt-6" key={`recommended-${user?.student_id || 'no-user'}`}>
           <div className="bg-white rounded-lg shadow-md p-8">
+            {/* Header with controls - ALWAYS VISIBLE - Works independently of notebook */}
+            <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-[#1e3a5f] mb-2">
+                  Your Recommended Schedule
+                </h2>
+                <p className="text-gray-600">
+                  Generate personalized course recommendations based on your preferences
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-[#1e3a5f]" />
+                  <Select value={timePreference} onValueChange={setTimePreference}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Time Preference" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Time</SelectItem>
+                      <SelectItem value="morning">Morning</SelectItem>
+                      <SelectItem value="afternoon">Afternoon</SelectItem>
+                      <SelectItem value="evening">Evening</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={generateRecommendations}
+                  disabled={generating || !user?.student_id}
+                  className="bg-[#1e3a5f] hover:bg-[#2a4f7a] text-white min-w-[180px]"
+                >
+                  {generating ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Get Recommendations
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Content area - buttons above are always visible and work independently */}
             {loading ? (
               <p className="text-center text-gray-500 py-8">Loading recommended schedule...</p>
             ) : recommendations.length === 0 ? (
               <div className="text-center py-8">
                 <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">No recommended schedule available</p>
-                <p className="text-sm text-gray-500">
-                  Recommendations will appear here once generated by the recommendation system.
+                <p className="text-gray-600 mb-2 font-medium">
+                  Ready to generate your personalized schedule
                 </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  {timePreference !== 'any'
+                    ? `Click "Get Recommendations" above to generate recommendations for ${timePreference} time preference.`
+                    : 'Select your preferred time above and click "Get Recommendations" to generate your personalized schedule. This works independently and only generates recommendations for you.'}
+                </p>
+                {!user?.student_id && (
+                  <p className="text-xs text-red-500 mt-2">
+                    Please log in to generate recommendations
+                  </p>
+                )}
               </div>
             ) : (
-              <div>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-[#1e3a5f] mb-2">
-                    Your Recommended Schedule
-                  </h2>
-                  <p className="text-gray-600">
-                    Based on your academic progress and preferences
-                  </p>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Monday / Wednesday / Friday Section */}
                   <div className="space-y-4">
@@ -294,7 +412,6 @@ export default function Schedule() {
                         .filter((course) => isTThCourse(course.days))
                         .sort((a, b) => parseCourseTime(a.time) - parseCourseTime(b.time))
                         .map(renderCourseCard)}
-                    </div>
                   </div>
                 </div>
               </div>

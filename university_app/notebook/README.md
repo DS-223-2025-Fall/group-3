@@ -2,12 +2,11 @@
 
 This service provides a Jupyter Notebook environment for data science work, including:
 - Schedule Recommender System
-- A/B Testing Framework
 - Database integration for storing results
 
 ## Notebook Structure
 
-- `baseline_recommender.ipynb`: Baseline recommender system and A/B testing framework
+- `baseline_recommender.ipynb`: Baseline recommender system
 - `Database/`: Database connection and models
   - `database.py`: Database connection setup
   - `models.py`: SQLAlchemy models matching the main database schema
@@ -21,11 +20,6 @@ This service provides a Jupyter Notebook environment for data science work, incl
   - Prerequisites satisfaction
   - Course popularity
 - Uses CRUD helpers (`create_record`) to save recommendations to `recommendation_results` table
-
-### A/B Testing Framework
-- Assigns students to test groups (A/B)
-- Tracks which model version each student sees
-- Uses CRUD helpers (`get_by_id`, `create_record`) to store assignments in `ab_test_assignments` table
 
 ## Database Access
 
@@ -43,11 +37,10 @@ This service provides a Jupyter Notebook environment for data science work, incl
 
 ## Database Tables
 
-The notebook creates two additional tables:
+The notebook creates one additional table:
 1. `recommendation_results`: Stores recommendation outputs
-2. `ab_test_assignments`: Stores A/B test group assignments
 
-These tables are created automatically when you run the "Create Database Tables for Results" cell in the notebook.
+This table is created automatically when you run the "Create Database Tables for Results" cell in the notebook.
 
 ## Usage
 
@@ -57,5 +50,4 @@ These tables are created automatically when you run the "Create Database Tables 
    - Load data from database
    - Initialize recommender
    - Generate recommendations
-   - Set up A/B testing
    - Save results to database
